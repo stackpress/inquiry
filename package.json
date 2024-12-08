@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "workspaces": [
+    "examples/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "yarn --cwd packages/inquire build",
+    "test": "yarn --cwd packages/inquire test"
+  }
+}
