@@ -1,0 +1,2 @@
+# inquiry
+Strong typed SQL
