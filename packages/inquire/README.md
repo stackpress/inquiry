@@ -1,2 +1,3 @@
-# inquiry
-Strong typed SQL
+# 💬 Inquire
+
+Generic typed SQL.
