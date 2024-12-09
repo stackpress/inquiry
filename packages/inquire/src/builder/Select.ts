@@ -1,15 +1,16 @@
 import type { 
   Order, 
+  Resolve,
   Relation, 
   FlatValue, 
-  DatabaseEngine
+  Connection
 } from '../types';
 
-export default class Select {
+export default class Select<R = unknown> {
   /**
-   * Database engine
+   * Database connection
    */
-  public readonly engine: DatabaseEngine;
+  public readonly connection: Connection;
 
   /**
    * The columns to select.
@@ -65,19 +66,19 @@ export default class Select {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.engine.dielect.select(this);
+    return this.connection.dialect.select(this);
   }
   
   /**
    * Set select, quote and action
    */
-  public constructor(select: string|string[] = '*', engine: DatabaseEngine) {
+  public constructor(select: string|string[] = '*', connection: Connection) {
     if (Array.isArray(select)) {
       this._columns = select;
     } else {
       this._columns = [select];
     }
-    this.engine = engine;
+    this.connection = connection;
   }
 
   /**
@@ -124,8 +125,8 @@ export default class Select {
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
-  public then() {
-    return this.engine.query([ this.query ]);
+  public then(resolve: Resolve<R[]>) {
+    return this.connection.query<R>([ this.query ]).then(resolve);
   }
 
   /**

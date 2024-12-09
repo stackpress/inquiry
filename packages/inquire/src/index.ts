@@ -11,6 +11,7 @@ import Sqlite from './dialect/Sqlite';
 
 import Engine from './Engine';
 import Exception from './Exception';
+import { joins } from './helpers';
 
 export type * from './types';
 export {
@@ -24,5 +25,6 @@ export {
   Pgsql,
   Sqlite,
   Engine,
-  Exception
+  Exception,
+  joins
 };

@@ -62,6 +62,10 @@ export type Value = FlatValue
   | (FlatValue|NestedObject<Value>)[]
   | NestedObject<Value>;
 
+
+export type Resolve<T> = (value: T) => T;
+export type Reject = (error: Error) => void;
+
 export type Order = 'ASC'|'DESC'|'asc'|'desc';
 export type Join = 'inner'
   | 'left'
@@ -75,22 +79,28 @@ export type Join = 'inner'
 //--------------------------------------------------------------------//
 // Dialect Types
 
-export interface Dialect {
-  alter: (builder: Alter) => QueryObject;
-  create: (builder: Create) => QueryObject;
-  delete: (builder: Delete) => QueryObject;
-  insert: (builder: Insert) => QueryObject;
-  select: (builder: Select) => QueryObject;
-  update: (builder: Update) => QueryObject;
+export type Dialect = {
+  alter(builder: Alter): QueryObject;
+  create(builder: Create): QueryObject;
+  delete(builder: Delete): QueryObject;
+  insert(builder: Insert): QueryObject;
+  select(builder: Select): QueryObject;
+  update(builder: Update): QueryObject;
 };
 
 //--------------------------------------------------------------------//
 // Engine Types
 
-export type QueryObject = { query: string, values: Value[] };
-export type QueryAction = (tx: QueryObject[]) => Promise<Value>;
+export type QueryObject = { query: string, values?: Value[] };
 
-export interface DatabaseEngine {
-  dielect: Dialect;
-  query: QueryAction;
+export interface Connection {
+  dialect: Dialect;
+
+  /**
+   * Query the database. Should return just the expected 
+   * results, because the raw results depends on the 
+   * native database engine connection. Any code that uses
+   * this library should not care about the kind of database.
+   */
+  query<R = unknown>(queries: QueryObject[]): Promise<R[]>;
 };

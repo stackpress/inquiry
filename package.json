@@ -6,6 +6,8 @@
   ],
   "scripts": {
     "build": "yarn --cwd packages/inquire build",
-    "test": "yarn --cwd packages/inquire test"
+    "test": "yarn --cwd packages/inquire test",
+    "test:pg": "yarn --cwd examples/with-pg test",
+    "test:pglite": "yarn --cwd examples/with-pglite test"
   }
 }
