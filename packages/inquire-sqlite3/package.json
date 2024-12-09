@@ -1,0 +1,34 @@
+{
+  "name": "@stackpress/inquire-sqlite3",
+  "version": "0.3.10",
+  "license": "Apache-2.0",
+  "description": "Generic typed better-sqlite3",
+  "author": "Chris <chris@incept.asia>",
+  "homepage": "https://github.com/stackpress/inquire",
+  "bugs": "https://github.com/stackpress/inquire/issues",
+  "repository": "stackpress/inquire",
+  "main": "index.js",
+  "files": [
+    "dist",
+    "index.js",
+    "index.d.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@stackpress/inquire": "0.3.10"
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.12",
+    "@types/node": "22.9.3",
+    "better-sqlite3": "11.7.0",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  }
+}

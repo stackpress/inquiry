@@ -1,8 +1,5 @@
-import type { 
-  Field, 
-  Resolve,
-  Connection 
-} from '../types';
+//common
+import type { Field, Resolve, Connection } from '../types';
 
 export default class Create<R = unknown> {
   /**

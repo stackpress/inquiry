@@ -1,8 +1,5 @@
-import type { 
-  Resolve,
-  FlatValue, 
-  Connection 
-} from '../types';
+//common
+import type { Resolve, FlatValue, Connection } from '../types';
 
 export default class Delete<R = unknown> {
   /**

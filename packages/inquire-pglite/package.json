@@ -1,0 +1,33 @@
+{
+  "name": "@stackpress/inquire-pglite",
+  "version": "0.3.10",
+  "license": "Apache-2.0",
+  "description": "Generic typed pglite",
+  "author": "Chris <chris@incept.asia>",
+  "homepage": "https://github.com/stackpress/inquire",
+  "bugs": "https://github.com/stackpress/inquire/issues",
+  "repository": "stackpress/inquire",
+  "main": "index.js",
+  "files": [
+    "dist",
+    "index.js",
+    "index.d.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@stackpress/inquire": "0.3.10"
+  },
+  "peerDependencies": {
+    "@electric-sql/pglite": "^0.2.14"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.3",
+    "@electric-sql/pglite": "0.2.14",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  }
+}

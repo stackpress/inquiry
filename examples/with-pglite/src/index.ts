@@ -1,14 +1,11 @@
 import { PGlite } from '@electric-sql/pglite';
-import Engine from '@stackpress/inquire/dist/Engine';
-import PGLiteConnection from './Connection';
+import connect from '@stackpress/inquire-pglite';
 
 async function main() {
   //this is the raw resource, anything you want
   const resource = new PGlite('./build/database');
   //this maps the resource to the engine
-  const connection = new PGLiteConnection(resource);
-  //this is the final engine that you will use to interact with the database
-  const engine = new Engine(connection);
+  const engine = connect(resource);
 
   const create = engine.create('profile')
     .addField('id', { type: 'VARCHAR', length: 255 })

@@ -1,8 +1,5 @@
-import type { 
-  Value, 
-  Resolve,
-  Connection 
-} from '../types';
+//common
+import type { Value, Resolve, Connection } from '../types';
 
 export default class Insert<R = unknown> {
   /**

@@ -5,7 +5,12 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn --cwd packages/inquire build",
+    "build": "yarn build:inquire && yarn build:mysql2 && yarn build:pg && yarn build:pglite && yarn build:sqlite3",
+    "build:inquire": "yarn --cwd packages/inquire build",
+    "build:mysql2": "yarn --cwd packages/inquire-mysql2 build",
+    "build:pg": "yarn --cwd packages/inquire-pg build",
+    "build:pglite": "yarn --cwd packages/inquire-pglite build",
+    "build:sqlite3": "yarn --cwd packages/inquire-sqlite3 build",
     "test": "yarn --cwd packages/inquire test",
     "test:mysql2": "yarn --cwd examples/with-mysql2 test",
     "test:pg": "yarn --cwd examples/with-pg test",

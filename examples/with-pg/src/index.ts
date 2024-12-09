@@ -1,6 +1,5 @@
 import { Client, Pool } from 'pg';
-import Engine from '@stackpress/inquire/dist/Engine';
-import PGConnection from './Connection';
+import connect from '@stackpress/inquire-pg';
 
 async function main(usePool = true) {
   //this is the raw resource, anything you want
@@ -22,9 +21,7 @@ async function main(usePool = true) {
     })();
 
   //this maps the resource to the engine
-  const db = new PGConnection(connection);
-  //this is the final engine that you will use to interact with the database
-  const engine = new Engine(db);
+  const engine = connect(connection);
 
   const create = engine.create('profile')
     .addField('id', { type: 'VARCHAR', length: 255 })

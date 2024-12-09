@@ -1,46 +1,27 @@
+//modules
+import type { PGlite, Transaction } from '@electric-sql/pglite';
+//stackpress
 import type { 
   Dialect, 
   Connection, 
   QueryObject
 } from '@stackpress/inquire/dist/types';
-import type { 
-  Connection as Database, 
-  FieldPacket, 
-  ResultSetHeader 
-} from 'mysql2/promise';
-import Mysql from '@stackpress/inquire/dist/dialect/Mysql';
+import Pgsql from '@stackpress/inquire/dist/dialect/Pgsql';
 import Exception from '@stackpress/inquire/dist/Exception';
+//local
+import type { Results } from './types';
 
-//see: https://github.com/DefinitelyTyped/DefinitelyTyped/blob/35b9555e28ea08d9f0054fc8929b2b71fa1b244f/types/pg/index.d.ts#L92C1-L94C2
-// export interface QueryResultRow {
-//   [column: string]: any;
-// }
-export type Results<R = unknown> = [
-  R[], 
-  FieldPacket[]
-];
-
-export type Header = {
-  fieldCount: number,
-  affectedRows: number,
-  insertId: number,
-  info: string,
-  serverStatus: number,
-  warningStatus: number,
-  changedRows: number
-};
-
-export default class Mysql2Connection implements Connection {
+export default class PGLiteConnection implements Connection {
   //sql language dialect
-  public readonly dialect: Dialect = Mysql;
+  public readonly dialect: Dialect = Pgsql;
 
   //the database connection
-  public readonly resource: Database;
+  public readonly resource: PGlite;
 
   /**
    * Set the connection
    */
-  public constructor(resource: Database) {
+  public constructor(resource: PGlite) {
     this.resource = resource;
   }
 
@@ -52,7 +33,7 @@ export default class Mysql2Connection implements Connection {
    */
   public async query<R = unknown>(queries: QueryObject[]) {
     const results = await this.raw<R>(queries);
-    return Array.isArray(results[0]) ? results[0] : [];
+    return results.rows;
   }
 
   /**
@@ -69,23 +50,16 @@ export default class Mysql2Connection implements Connection {
     
     if (queue.length === 0) {
       const formatted = this._format(last);
-      return await this._query<R>(formatted);
+      return await this._query<R>(formatted, this.resource);
     }
-
-    try {
-      await this.resource.query('START TRANSACTION');
+    return await this.resource.transaction(async tx => {
       for (const request of queries) {
         const formatted = this._format(request);
-        await this._query<R>(formatted);
+        await this._query<R>(formatted, tx);
       }
       const formatted = this._format(last);
-      const results = await this._query<R>(formatted);
-      await this.resource.query('COMMIT');
-      return results;
-    } catch (e) {
-      await this.resource.query('ROLLBACK');
-      throw e;
-    }
+      return await this._query<R>(formatted, tx);
+    }) as Results<R>;
   }
 
   /**
@@ -95,6 +69,13 @@ export default class Mysql2Connection implements Connection {
   protected _format(request: QueryObject) {
     let { query, values = [] } = request;
     for (let i = 0; i < values.length; i++) {
+      if (!query.includes('?')) {
+        throw Exception.for(
+          'Query does not match the number of values.'
+        );
+      }
+      //format the query
+      query = query.replace('?', `$${i + 1}`);
       //check the value for Date and arrays and objects
       const value = values[i];
       if (value instanceof Date) {
@@ -105,18 +86,21 @@ export default class Mysql2Connection implements Connection {
         values[i] = JSON.stringify(value);
       }
     }
+    if (query.includes('?')) {
+      throw Exception.for(
+        'Query does not match the number of values.'
+      );
+    }
     return { query, values };
   }
 
   /**
    * Call the database. If no values are provided, use exec
    */
-  protected async _query<R = unknown>(request: QueryObject) {
+  protected _query<R = unknown>(request: QueryObject, resource: PGlite|Transaction) {
     const { query, values = [] } = request;
-    const results = await this.resource.execute(query, values);
-    if (Array.isArray(results[0])) {
-      return results as Results<R>;
-    }
-    return results as unknown as [ ResultSetHeader, undefined ];
+    return values.length === 0
+      ? resource.exec(query) as unknown as Promise<Results<R>>
+      : resource.query(query, values) as unknown as Promise<Results<R>>;
   }
 }

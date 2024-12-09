@@ -1,8 +1,7 @@
 import mysql from 'mysql2/promise';
-import Engine from '@stackpress/inquire/dist/Engine';
-import Mysql2Connection from './Connection';
+import connect from '@stackpress/inquire-mysql2';
 
-async function main(usePool = true) {
+async function main() {
   //this is the raw resource, anything you want
   const resource = await mysql.createConnection({
     host: 'localhost',
@@ -10,9 +9,7 @@ async function main(usePool = true) {
     database: 'inquire',
   });
   //this maps the resource to the engine
-  const connection = new Mysql2Connection(resource);
-  //this is the final engine that you will use to interact with the database
-  const engine = new Engine(connection);
+  const engine = connect(resource);
 
   const create = engine.create('profile')
     .addField('id', { type: 'VARCHAR', length: 255 })
@@ -49,4 +46,4 @@ async function main(usePool = true) {
   await resource.end();
 }
 
-main(true).catch(console.error);
+main().catch(console.error);
