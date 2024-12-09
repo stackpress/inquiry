@@ -1,7 +1,7 @@
 {
-  "name": "with-pg",
+  "name": "with-sqlite3",
   "version": "1.0.0",
-  "description": "A simple boilerplate for using inquire with pg.",
+  "description": "A simple boilerplate for using inquire with better-sqlite3.",
   "private": true,
   "scripts": {
     "build": "tsc",
@@ -9,11 +9,11 @@
   },
   "dependencies": {
     "@stackpress/inquire": "0.3.10",
-    "pg": "8.13.1"
+    "better-sqlite3": "11.7.0"
   },
   "devDependencies": {
-    "@types/pg": "8.11.10",
     "@types/node": "22.9.3",
+    "@types/better-sqlite3": "7.6.12",
     "ts-node": "10.9.2",
     "typescript": "5.7.2"
   }

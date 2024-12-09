@@ -8,6 +8,7 @@
     "build": "yarn --cwd packages/inquire build",
     "test": "yarn --cwd packages/inquire test",
     "test:pg": "yarn --cwd examples/with-pg test",
-    "test:pglite": "yarn --cwd examples/with-pglite test"
+    "test:pglite": "yarn --cwd examples/with-pglite test",
+    "test:sqlite3": "yarn --cwd examples/with-sqlite3 test"
   }
 }
