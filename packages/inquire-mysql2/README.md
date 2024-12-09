@@ -1,0 +1,3 @@
+# 💬 Inquire
+
+Generic typed SQL.

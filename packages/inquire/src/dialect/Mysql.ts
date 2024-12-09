@@ -1,12 +1,12 @@
-import { Join, Value, FlatValue, Dialect } from '../types';
-
+//builder
 import type Alter from '../builder/Alter';
 import type Create from '../builder/Create';
 import type Delete from '../builder/Delete';
 import type Insert from '../builder/Insert';
 import type Select from '../builder/Select';
 import type Update from '../builder/Update';
-
+//common
+import type { Join, Value, FlatValue, Dialect } from '../types';
 import Exception from '../Exception';
 import { joins } from '../helpers';
 

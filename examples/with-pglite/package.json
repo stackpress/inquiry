@@ -8,8 +8,8 @@
     "test": "ts-node ./src/index.ts"
   },
   "dependencies": {
-    "@stackpress/inquire": "0.3.10",
-    "@electric-sql/pglite": "0.2.14"
+    "@electric-sql/pglite": "0.2.14",
+    "@stackpress/inquire-pglite": "0.3.10"
   },
   "devDependencies": {
     "@types/node": "22.9.3",

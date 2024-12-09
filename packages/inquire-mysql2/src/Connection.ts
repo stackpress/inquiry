@@ -1,24 +1,22 @@
+//modules
+import type { 
+  ResultSetHeader,
+  Connection as Database 
+} from 'mysql2/promise';
+//stackpress
 import type { 
   Dialect, 
   Connection, 
   QueryObject
 } from '@stackpress/inquire/dist/types';
-import { Database } from 'better-sqlite3';
-import Sqlite from '@stackpress/inquire/dist/dialect/Sqlite';
+import Mysql from '@stackpress/inquire/dist/dialect/Mysql';
 import Exception from '@stackpress/inquire/dist/Exception';
+//local
+import type { Results } from './types';
 
-//see: https://github.com/DefinitelyTyped/DefinitelyTyped/blob/35b9555e28ea08d9f0054fc8929b2b71fa1b244f/types/pg/index.d.ts#L92C1-L94C2
-// export interface QueryResultRow {
-//   [column: string]: any;
-// }
-export type Results = { 
-  changes: number, 
-  lastInsertRowid: number 
-};
-
-export default class BetterSqlite3Connection implements Connection {
+export default class Mysql2Connection implements Connection {
   //sql language dialect
-  public readonly dialect: Dialect = Sqlite;
+  public readonly dialect: Dialect = Mysql;
 
   //the database connection
   public readonly resource: Database;
@@ -38,7 +36,7 @@ export default class BetterSqlite3Connection implements Connection {
    */
   public async query<R = unknown>(queries: QueryObject[]) {
     const results = await this.raw<R>(queries);
-    return Array.isArray(results) ? results : [];
+    return Array.isArray(results[0]) ? results[0] : [];
   }
 
   /**
@@ -55,19 +53,23 @@ export default class BetterSqlite3Connection implements Connection {
     
     if (queue.length === 0) {
       const formatted = this._format(last);
-      return this._query<R>(formatted);
+      return await this._query<R>(formatted);
     }
 
-    const tx = this.resource.transaction(() => {
+    try {
+      await this.resource.query('START TRANSACTION');
       for (const request of queries) {
         const formatted = this._format(request);
-        this._query<R>(formatted);
+        await this._query<R>(formatted);
       }
       const formatted = this._format(last);
-      return this._query<R>(formatted);
-    });
-
-    return tx();
+      const results = await this._query<R>(formatted);
+      await this.resource.query('COMMIT');
+      return results;
+    } catch (e) {
+      await this.resource.query('ROLLBACK');
+      throw e;
+    }
   }
 
   /**
@@ -93,12 +95,13 @@ export default class BetterSqlite3Connection implements Connection {
   /**
    * Call the database. If no values are provided, use exec
    */
-  protected _query<R = unknown>(request: QueryObject) {
+  protected async _query<R = unknown>(request: QueryObject) {
     const { query, values = [] } = request;
-    const stmt = this.resource.prepare(query);
-    if (query.toUpperCase().startsWith('SELECT')) {
-      return stmt.all(...values) as R[];
+    const results = await this.resource.execute(query, values);
+    if (Array.isArray(results[0])) {
+      return results as Results<R>;
     }
-    return stmt.run(...values) as Results;
+    return results as unknown as [ ResultSetHeader, undefined ];
   }
 }
+

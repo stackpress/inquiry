@@ -1,32 +1,27 @@
+//modules
+import { Client, PoolClient } from 'pg';
+//stackpress
 import type { 
   Dialect, 
   Connection, 
   QueryObject
 } from '@stackpress/inquire/dist/types';
-import type { PGlite, Transaction } from '@electric-sql/pglite';
 import Pgsql from '@stackpress/inquire/dist/dialect/Pgsql';
 import Exception from '@stackpress/inquire/dist/Exception';
+//local
+import type { Results } from './types';
 
-export type Results<T = any> = {
-  rows: T[],
-  fields: {
-    name: string,
-    dataTypeID: number
-  }[],
-  affectedRows: number
-}
-
-export default class PGLiteConnection implements Connection {
+export default class PGConnection implements Connection {
   //sql language dialect
   public readonly dialect: Dialect = Pgsql;
 
   //the database connection
-  public readonly resource: PGlite;
+  public readonly resource: Client|PoolClient;
 
   /**
    * Set the connection
    */
-  public constructor(resource: PGlite) {
+  public constructor(resource: Client|PoolClient) {
     this.resource = resource;
   }
 
@@ -55,16 +50,30 @@ export default class PGLiteConnection implements Connection {
     
     if (queue.length === 0) {
       const formatted = this._format(last);
-      return await this._query<R>(formatted, this.resource);
+      return await this._query<R>(formatted);
     }
-    return await this.resource.transaction(async tx => {
+    try {
+      await this._query({ query: 'BEGIN', values: [] });
       for (const request of queries) {
         const formatted = this._format(request);
-        await this._query<R>(formatted, tx);
+        await this._query<R>(formatted);
       }
       const formatted = this._format(last);
-      return await this._query<R>(formatted, tx);
-    }) as Results<R>;
+      const results = await this._query<R>(formatted);
+      await this._query({ query: 'COMMIT', values: [] });
+      if (this.resource instanceof Client === false) {
+        //single clients don't need release
+        this.resource.release();
+      }
+      return results;
+    } catch (e) {
+      await this._query({ query: 'ROLLBACK', values: [] });
+      if (this.resource instanceof Client === false) {
+        //single clients don't need release
+        this.resource.release();
+      }
+      throw e;
+    }
   }
 
   /**
@@ -102,10 +111,8 @@ export default class PGLiteConnection implements Connection {
   /**
    * Call the database. If no values are provided, use exec
    */
-  protected _query<R = unknown>(request: QueryObject, resource: PGlite|Transaction) {
+  protected _query<R = unknown>(request: QueryObject) {
     const { query, values = [] } = request;
-    return values.length === 0
-      ? resource.exec(query) as unknown as Promise<Results<R>>
-      : resource.query(query, values) as unknown as Promise<Results<R>>;
+    return this.resource.query(query, values) as unknown as Promise<Results<R>>;
   }
 }

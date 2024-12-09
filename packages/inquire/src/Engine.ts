@@ -1,11 +1,12 @@
-import type { Connection } from './types';
-
+//builder
 import Alter from './builder/Alter';
 import Create from './builder/Create';
 import Delete from './builder/Delete';
 import Insert from './builder/Insert';
 import Select from './builder/Select';
 import Update from './builder/Update';
+//local
+import type { Connection } from './types';
 
 export default class Engine {
   public readonly connection: Connection;

@@ -1,14 +1,11 @@
 import sqlite from 'better-sqlite3';
-import Engine from '@stackpress/inquire/dist/Engine';
-import BetterSqlite3Connection from './Connection';
+import connect from '@stackpress/inquire-sqlite3';
 
-async function main(usePool = true) {
+async function main() {
   //this is the raw resource, anything you want
   const resource = sqlite(':memory:');
   //this maps the resource to the engine
-  const connection = new BetterSqlite3Connection(resource);
-  //this is the final engine that you will use to interact with the database
-  const engine = new Engine(connection);
+  const engine = connect(resource);
 
   const create = engine.create('profile')
     .addField('id', { type: 'VARCHAR', length: 255 })
@@ -43,4 +40,4 @@ async function main(usePool = true) {
   console.log(JSON.stringify(await select, null, 2));
 }
 
-main(true).catch(console.error);
+main().catch(console.error);
