@@ -12,8 +12,8 @@
     "pg": "8.13.1"
   },
   "devDependencies": {
-    "@types/pg": "8.11.10",
     "@types/node": "22.9.3",
+    "@types/pg": "8.11.10",
     "ts-node": "10.9.2",
     "typescript": "5.7.2"
   }

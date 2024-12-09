@@ -1,28 +1,12 @@
-import { Client, Pool } from 'pg';
+import sqlite from 'better-sqlite3';
 import Engine from '@stackpress/inquire/dist/Engine';
-import PGConnection from './Connection';
+import BetterSqlite3Connection from './Connection';
 
 async function main(usePool = true) {
   //this is the raw resource, anything you want
-  const resource = usePool 
-    ? await (async () => {
-      const pool = new Pool({
-        database: 'inquire',
-        user: 'postgres'
-      });
-      return await pool.connect();
-    })() 
-    : await (async () => {
-      const resource = new Client({
-        database: 'inquire',
-        user: 'postgres'
-      });
-      await resource.connect();
-      return resource;
-    })();
-
+  const resource = sqlite(':memory:');
   //this maps the resource to the engine
-  const db = new PGConnection(resource);
+  const db = new BetterSqlite3Connection(resource);
   //this is the final engine that you will use to interact with the database
   const engine = new Engine(db);
 
@@ -57,14 +41,6 @@ async function main(usePool = true) {
   console.log(remove.query);
   console.log(JSON.stringify(await remove, null, 2));
   console.log(JSON.stringify(await select, null, 2));
-
-  if (usePool && resource instanceof Client === false) {
-    resource.release();
-  }
-
-  if (resource instanceof Client) {
-    await resource.end();
-  }
 }
 
 main(true).catch(console.error);
