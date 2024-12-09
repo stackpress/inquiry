@@ -1,10 +1,14 @@
-import type { Value, DatabaseEngine } from '../types';
+import type { 
+  Value, 
+  Resolve,
+  Connection 
+} from '../types';
 
-export default class Insert {
+export default class Insert<R = unknown> {
   /**
-   * Database engine
+   * Database connection
    */
-  public readonly engine: DatabaseEngine;
+  public readonly connection: Connection;
   
   /**
    * The table to delete from.
@@ -30,23 +34,23 @@ export default class Insert {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.engine.dielect.insert(this);
+    return this.connection.dialect.insert(this);
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, engine: DatabaseEngine) {
+  public constructor(table: string, connection: Connection) {
     this._table = table;
-    this.engine = engine;
+    this.connection = connection;
   }
 
   /**
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
-  public then() {
-    return this.engine.query([ this.query ]);
+  public then(resolve: Resolve<R[]>) {
+    return this.connection.query<R>([ this.query ]).then(resolve);
   }
 
   values(values: Record<string, Value>|Record<string, Value>[]) {

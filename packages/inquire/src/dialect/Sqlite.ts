@@ -8,27 +8,16 @@ import type Select from '../builder/Select';
 import type Update from '../builder/Update';
 
 import Exception from '../Exception';
+import { joins } from '../helpers';
 
-const joins = {
-  inner: 'INNER',
-  left: 'LEFT',
-  left_outer: 'LEFT OUTER',
-  right: 'RIGHT',
-  right_outer: 'RIGHT OUTER',
-  full: 'FULL',
-  full_outer: 'FULL OUTER',
-  cross: 'CROSS'
-};
+//The character used to quote identifiers.
+const q = '`';
 
-export default class Sqlite implements Dialect {
-  // The character used to quote identifiers.
-  public static readonly quote = '`';
-  
+const Sqlite: Dialect = {
   /**
    * Converts alter builder to query and values
    */
-  public alter(builder: Alter) {
-    const q = Sqlite.quote;
+  alter(builder: Alter) {
     const build = builder.build;
     const query: string[] = [];
 
@@ -132,13 +121,12 @@ export default class Sqlite implements Dialect {
       query: `ALTER TABLE ${build.table} (${query.join(', ')})`, 
       values: [] 
     };
-  }
+  },
 
   /**
    * Converts create builder to query and values
    */
-  public create(builder: Create) {
-    const q = Sqlite.quote;
+  create(builder: Create) {
     const build = builder.build;
     if (!build.fields.length) {
       throw Exception.for('No fields provided');
@@ -194,13 +182,12 @@ export default class Sqlite implements Dialect {
       query: `CREATE TABLE IF NOT EXISTS ${build.table} (${query.join(' ')})`, 
       values: [] 
     };
-  }
+  },
 
   /**
    * Converts delete builder to query and values
    */
-  public delete(builder: Delete) {
-    const q = Sqlite.quote;
+  delete(builder: Delete) {
     const build = builder.build;
     if (!build.filters.length) {
       throw Exception.for('No filters provided');
@@ -217,13 +204,12 @@ export default class Sqlite implements Dialect {
     query.push(`WHERE ${filters}`);
 
     return { query: query.join(' '), values };
-  }
+  },
 
   /**
    * Converts insert builder to query and values
    */
-  public insert(builder: Insert) {
-    const q = Sqlite.quote;
+  insert(builder: Insert) {
     const build = builder.build;
     if (build.values.length === 0) {
       throw Exception.for('No values provided');
@@ -245,13 +231,12 @@ export default class Sqlite implements Dialect {
 
     query.push(`VALUES ${row.join(', ')}`);
     return { query: query.join(' '), values };
-  }
+  },
 
   /**
    * Converts select builder to query and values
    */
-  public select(builder: Select) {
-    const q = Sqlite.quote;
+  select(builder: Select) {
     const build = builder.build;
     if (!build.table) {
       throw Exception.for('No table specified');
@@ -307,13 +292,12 @@ export default class Sqlite implements Dialect {
     }
 
     return { query: query.join(' '), values };
-  }
+  },
 
   /**
    * Converts update builder to query and values
    */
-  public update(builder: Update) {
-    const q = Sqlite.quote;
+  update(builder: Update) {
     const build = builder.build;
     if (!Object.keys(build.data).length) {
       throw Exception.for('No data provided');
@@ -341,5 +325,7 @@ export default class Sqlite implements Dialect {
     }
 
     return { query: query.join(' '), values };
-  }
-}
+  },
+};
+
+export default Sqlite;

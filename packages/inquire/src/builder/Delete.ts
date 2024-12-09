@@ -1,10 +1,14 @@
-import type { FlatValue, DatabaseEngine } from '../types';
+import type { 
+  Resolve,
+  FlatValue, 
+  Connection 
+} from '../types';
 
-export default class Delete {
+export default class Delete<R = unknown> {
   /**
-   * Database engine
+   * Database connection
    */
-  public readonly engine: DatabaseEngine;
+  public readonly connection: Connection;
 
   /**
    * The filters to apply.
@@ -30,23 +34,23 @@ export default class Delete {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.engine.dielect.delete(this);
+    return this.connection.dialect.delete(this);
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, engine: DatabaseEngine) {
+  public constructor(table: string, connection: Connection) {
     this._table = table;
-    this.engine = engine;
+    this.connection = connection;
   }
 
   /**
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
-  public then() {
-    return this.engine.query([ this.query ]);
+  public then(resolve: Resolve<R[]>) {
+    return this.connection.query<R>([ this.query ]).then(resolve);
   }
 
   /**

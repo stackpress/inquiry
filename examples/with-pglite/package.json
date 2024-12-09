@@ -1,0 +1,19 @@
+{
+  "name": "with-pglite",
+  "version": "1.0.0",
+  "description": "A simple boilerplate for using inquire with pglite.",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node ./src/index.ts"
+  },
+  "dependencies": {
+    "@stackpress/inquire": "0.3.10",
+    "@electric-sql/pglite": "0.2.14"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.3",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  }
+}

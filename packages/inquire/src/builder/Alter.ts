@@ -1,17 +1,18 @@
 import type { 
   Field, 
+  Resolve,
   AlterFields, 
   AlterKeys, 
   AlterUnqiues, 
   AlterPrimaries,
-  DatabaseEngine
+  Connection
 } from '../types';
 
-export default class Alter {
+export default class Alter<R = unknown> {
   /**
-   * Database engine
+   * Database connection
    */
-  public readonly engine: DatabaseEngine;
+  public readonly connection: Connection;
 
   /**
    * List of fields
@@ -55,15 +56,15 @@ export default class Alter {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.engine.dielect.alter(this);
+    return this.connection.dialect.alter(this);
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, engine: DatabaseEngine) {
+  public constructor(table: string, connection: Connection) {
     this._table = table;
-    this.engine = engine;
+    this.connection = connection;
   }
 
   /**
@@ -148,7 +149,7 @@ export default class Alter {
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
-  public then() {
-    return this.engine.query([ this.query ]);
+  public then(resolve: Resolve<R[]>) {
+    return this.connection.query<R>([ this.query ]).then(resolve);
   }
 }

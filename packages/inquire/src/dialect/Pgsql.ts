@@ -8,27 +8,16 @@ import type Select from '../builder/Select';
 import type Update from '../builder/Update';
 
 import Exception from '../Exception';
+import { joins } from '../helpers';
 
-const joins = {
-  inner: 'INNER',
-  left: 'LEFT',
-  left_outer: 'LEFT OUTER',
-  right: 'RIGHT',
-  right_outer: 'RIGHT OUTER',
-  full: 'FULL',
-  full_outer: 'FULL OUTER',
-  cross: 'CROSS'
-};
+//The character used to quote identifiers.
+const q = '"';
 
-export default class Pgsql implements Dialect {
-  // The character used to quote identifiers.
-  public static readonly quote = '`';
-  
+const Pgsql: Dialect = {
   /**
    * Converts alter builder to query and values
    */
-  public alter(builder: Alter) {
-    const q = Pgsql.quote;
+  alter(builder: Alter) {
     const build = builder.build;
     const query: string[] = [];
 
@@ -132,15 +121,15 @@ export default class Pgsql implements Dialect {
       query: `ALTER TABLE ${build.table} (${query.join(', ')})`, 
       values: [] 
     };
-  }
+  },
 
   /**
    * Converts create builder to query and values
+   * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
-  public create(builder: Create) {
-    const q = Pgsql.quote;
+  create(builder: Create) {
     const build = builder.build;
-    if (!build.fields.length) {
+    if (!Object.values(build.fields).length) {
       throw Exception.for('No fields provided');
     }
 
@@ -150,8 +139,12 @@ export default class Pgsql implements Dialect {
       const field = build.fields[name];
       const column: string[] = [];
       column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
+      if (field.type && field.length) {
+        column.push(`${field.type}(${field.length})`);
+      } else {
+        field.type && column.push(field.type);
+        field.length && column.push(`(${field.length})`);
+      }
       field.attribute && column.push(field.attribute);
       field.unsigned && column.push('UNSIGNED');
       field.nullable && column.push('NOT NULL');
@@ -194,13 +187,13 @@ export default class Pgsql implements Dialect {
       query: `CREATE TABLE IF NOT EXISTS ${build.table} (${query.join(' ')})`, 
       values: [] 
     };
-  }
+  },
 
   /**
    * Converts delete builder to query and values
+   * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
-  public delete(builder: Delete) {
-    const q = Pgsql.quote;
+  delete(builder: Delete) {
     const build = builder.build;
     if (!build.filters.length) {
       throw Exception.for('No filters provided');
@@ -217,13 +210,13 @@ export default class Pgsql implements Dialect {
     query.push(`WHERE ${filters}`);
 
     return { query: query.join(' '), values };
-  }
+  },
 
   /**
    * Converts insert builder to query and values
+   * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
-  public insert(builder: Insert) {
-    const q = Pgsql.quote;
+  insert(builder: Insert) {
     const build = builder.build;
     if (build.values.length === 0) {
       throw Exception.for('No values provided');
@@ -245,13 +238,13 @@ export default class Pgsql implements Dialect {
 
     query.push(`VALUES ${row.join(', ')}`);
     return { query: query.join(' '), values };
-  }
+  },
 
   /**
    * Converts select builder to query and values
+   * results: [{"rows":[],"fields":[{"name":"id","dataTypeID":1043}...],"affectedRows":0}]
    */
-  public select(builder: Select) {
-    const q = Pgsql.quote;
+  select(builder: Select) {
     const build = builder.build;
     if (!build.table) {
       throw Exception.for('No table specified');
@@ -263,7 +256,9 @@ export default class Pgsql implements Dialect {
     const columns = build.columns
       .map(column => column.split(' '))
       .flat(1)
-      .map(column => `${q}${column.split('.').join('`.`')}${q}`);
+      .map(column => `${q}${
+        column.split('.').join(`${q}.${q}`)
+      }${q}`.replaceAll(`${q}*${q}`, '*'));
 
     query.push(`SELECT ${columns.join(', ')}`);
     if (build.table) {
@@ -307,13 +302,13 @@ export default class Pgsql implements Dialect {
     }
 
     return { query: query.join(' '), values };
-  }
+  },
 
   /**
    * Converts update builder to query and values
+   * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
-  public update(builder: Update) {
-    const q = Pgsql.quote;
+  update(builder: Update) {
     const build = builder.build;
     if (!Object.keys(build.data).length) {
       throw Exception.for('No data provided');
@@ -341,5 +336,7 @@ export default class Pgsql implements Dialect {
     }
 
     return { query: query.join(' '), values };
-  }
-}
+  },
+};
+
+export default Pgsql;

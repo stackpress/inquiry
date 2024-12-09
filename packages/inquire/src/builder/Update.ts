@@ -1,10 +1,15 @@
-import type { Value, FlatValue, DatabaseEngine } from '../types';
+import type { 
+  Value, 
+  Resolve,
+  FlatValue, 
+  Connection 
+} from '../types';
 
-export default class Update {
+export default class Update<R = unknown> {
   /**
-   * Database engine
+   * Database connection
    */
-  public readonly engine: DatabaseEngine;
+  public readonly connection: Connection;
 
   /**
    * The data to update.
@@ -36,15 +41,15 @@ export default class Update {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.engine.dielect.update(this);
+    return this.connection.dialect.update(this);
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, engine: DatabaseEngine) {
+  public constructor(table: string, connection: Connection) {
     this._table = table;
-    this.engine = engine;
+    this.connection = connection;
   }
 
   /**
@@ -59,8 +64,8 @@ export default class Update {
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
-  public then() {
-    return this.engine.query([ this.query ]);
+  public then(resolve: Resolve<R[]>) {
+    return this.connection.query<R>([ this.query ]).then(resolve);
   }
 
   /**
