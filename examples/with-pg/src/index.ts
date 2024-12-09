@@ -4,7 +4,7 @@ import PGConnection from './Connection';
 
 async function main(usePool = true) {
   //this is the raw resource, anything you want
-  const resource = usePool 
+  const connection = usePool 
     ? await (async () => {
       const pool = new Pool({
         database: 'inquire',
@@ -22,7 +22,7 @@ async function main(usePool = true) {
     })();
 
   //this maps the resource to the engine
-  const db = new PGConnection(resource);
+  const db = new PGConnection(connection);
   //this is the final engine that you will use to interact with the database
   const engine = new Engine(db);
 
@@ -58,12 +58,12 @@ async function main(usePool = true) {
   console.log(JSON.stringify(await remove, null, 2));
   console.log(JSON.stringify(await select, null, 2));
 
-  if (usePool && resource instanceof Client === false) {
-    resource.release();
+  if (usePool && connection instanceof Client === false) {
+    connection.release();
   }
 
-  if (resource instanceof Client) {
-    await resource.end();
+  if (connection instanceof Client) {
+    await connection.end();
   }
 }
 

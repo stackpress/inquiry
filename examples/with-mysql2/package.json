@@ -1,0 +1,19 @@
+{
+  "name": "with-mysql2",
+  "version": "1.0.0",
+  "description": "A simple boilerplate for using inquire with mysql2.",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node ./src/index.ts"
+  },
+  "dependencies": {
+    "@stackpress/inquire": "0.3.10",
+    "mysql2": "3.11.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.3",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  }
+}

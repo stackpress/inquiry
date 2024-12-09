@@ -6,9 +6,9 @@ async function main(usePool = true) {
   //this is the raw resource, anything you want
   const resource = sqlite(':memory:');
   //this maps the resource to the engine
-  const db = new BetterSqlite3Connection(resource);
+  const connection = new BetterSqlite3Connection(resource);
   //this is the final engine that you will use to interact with the database
-  const engine = new Engine(db);
+  const engine = new Engine(connection);
 
   const create = engine.create('profile')
     .addField('id', { type: 'VARCHAR', length: 255 })

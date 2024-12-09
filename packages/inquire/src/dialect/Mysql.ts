@@ -128,7 +128,7 @@ const Mysql: Dialect = {
    */
   create(builder: Create) {
     const build = builder.build;
-    if (!build.fields.length) {
+    if (!Object.values(build.fields).length) {
       throw Exception.for('No fields provided');
     }
 
@@ -138,8 +138,12 @@ const Mysql: Dialect = {
       const field = build.fields[name];
       const column: string[] = [];
       column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
+      if (field.type && field.length) {
+        column.push(`${field.type}(${field.length})`);
+      } else {
+        field.type && column.push(field.type);
+        field.length && column.push(`(${field.length})`);
+      }
       field.attribute && column.push(field.attribute);
       field.unsigned && column.push('UNSIGNED');
       field.nullable && column.push('NOT NULL');
@@ -248,7 +252,9 @@ const Mysql: Dialect = {
     const columns = build.columns
       .map(column => column.split(' '))
       .flat(1)
-      .map(column => `${q}${column.split('.').join('`.`')}${q}`);
+      .map(column => `${q}${
+        column.split('.').join(`${q}.${q}`)
+      }${q}`.replaceAll(`${q}*${q}`, '*'));
 
     query.push(`SELECT ${columns.join(', ')}`);
     if (build.table) {
