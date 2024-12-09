@@ -1,12 +1,16 @@
-import { PGlite } from '@electric-sql/pglite';
+import mysql from 'mysql2/promise';
 import Engine from '@stackpress/inquire/dist/Engine';
-import PGLiteConnection from './Connection';
+import Mysql2Connection from './Connection';
 
-async function main() {
+async function main(usePool = true) {
   //this is the raw resource, anything you want
-  const resource = new PGlite('./build/database');
+  const resource = await mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    database: 'inquire',
+  });
   //this maps the resource to the engine
-  const connection = new PGLiteConnection(resource);
+  const connection = new Mysql2Connection(resource);
   //this is the final engine that you will use to interact with the database
   const engine = new Engine(connection);
 
@@ -41,7 +45,8 @@ async function main() {
   console.log(remove.query);
   console.log(JSON.stringify(await remove, null, 2));
   console.log(JSON.stringify(await select, null, 2));
-  
+
+  await resource.end();
 }
 
-main().catch(console.error);
+main(true).catch(console.error);
