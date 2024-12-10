@@ -94,7 +94,7 @@ export default class Select<R = unknown> {
    * JOIN clause
    */
   public join(type: string, table: string, from: string, to: string, as?: string) {
-    this._relations.push({ type, table, as: as  || table, from, to });
+    this._relations.push({ type, table, as: as || table, from, to });
     return this;
   }
 

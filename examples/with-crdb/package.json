@@ -1,0 +1,21 @@
+{
+  "name": "with-crdb",
+  "version": "1.0.0",
+  "description": "A simple boilerplate for using inquire with cockroachdb.",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "dotenv -e .env -- yarn ts-node ./src/index.ts"
+  },
+  "dependencies": {
+    "@stackpress/inquire-pg": "0.3.10",
+    "pg": "8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.3",
+    "@types/pg": "8.11.10",
+    "dotenv-cli": "7.4.4",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  }
+}

@@ -12,6 +12,7 @@
     "build:pglite": "yarn --cwd packages/inquire-pglite build",
     "build:sqlite3": "yarn --cwd packages/inquire-sqlite3 build",
     "test": "yarn --cwd packages/inquire test",
+    "test:crdb": "yarn --cwd examples/with-crdb test",
     "test:mysql2": "yarn --cwd examples/with-mysql2 test",
     "test:pg": "yarn --cwd examples/with-pg test",
     "test:pglite": "yarn --cwd examples/with-pglite test",
