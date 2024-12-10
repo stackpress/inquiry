@@ -3,15 +3,15 @@ import type {
   Order, 
   Resolve,
   Relation, 
-  FlatValue, 
-  Connection
+  FlatValue
 } from '../types';
+import Engine from '../Engine';
 
 export default class Select<R = unknown> {
   /**
-   * Database connection
+   * Database engine
    */
-  public readonly connection: Connection;
+  public readonly engine: Engine;
 
   /**
    * The columns to select.
@@ -67,19 +67,19 @@ export default class Select<R = unknown> {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.connection.dialect.select(this);
+    return this.engine.dialect.select(this);
   }
   
   /**
    * Set select, quote and action
    */
-  public constructor(select: string|string[] = '*', connection: Connection) {
+  public constructor(select: string|string[] = '*', engine: Engine) {
     if (Array.isArray(select)) {
       this._columns = select;
     } else {
       this._columns = [select];
     }
-    this.connection = connection;
+    this.engine = engine;
   }
 
   /**
@@ -127,7 +127,7 @@ export default class Select<R = unknown> {
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.connection.query<R>([ this.query ]).then(resolve);
+    return this.engine.query<R>([ this.query ]).then(resolve);
   }
 
   /**
