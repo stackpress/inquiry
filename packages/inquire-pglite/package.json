@@ -1,6 +1,6 @@
 {
   "name": "@stackpress/inquire-pglite",
-  "version": "0.3.10",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "description": "Generic typed pglite",
   "author": "Chris <chris@incept.asia>",
@@ -19,7 +19,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@stackpress/inquire": "0.3.10"
+    "@stackpress/inquire": "0.1.1"
   },
   "peerDependencies": {
     "@electric-sql/pglite": "^0.2.14"
