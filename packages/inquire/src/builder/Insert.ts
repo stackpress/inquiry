@@ -1,12 +1,13 @@
 //common
-import type { Value, Resolve } from '../types';
+import type { Value, Resolve, Dialect } from '../types';
 import Engine from '../Engine';
+import Exception from '../Exception';
 
 export default class Insert<R = unknown> {
   /**
    * Database engine
    */
-  public readonly engine: Engine;
+  protected _engine?: Engine;
   
   /**
    * The table to delete from.
@@ -19,9 +20,31 @@ export default class Insert<R = unknown> {
   protected _values: Record<string, Value>[] = [];
 
   /**
+   * Sets the engine for the builder
+   */
+  public get engine() {
+    return this._engine;
+  }
+
+  /**
+   * Sets the engine for the builder
+   */
+  public set engine(engine: Engine | undefined) {
+    this._engine = engine;
+  }
+
+  /**
+   * Set table, quote and action
+   */
+  public constructor(table: string, engine?: Engine) {
+    this._table = table;
+    this._engine = engine;
+  }
+
+  /**
    * Converts the class data to object
    */
-  public get build() {
+  public build() {
     return {
       table: this._table,
       values: this._values
@@ -31,16 +54,12 @@ export default class Insert<R = unknown> {
   /**
    * Convert the builder to a query object.
    */
-  public get query() {
-    return this.engine.dialect.insert(this);
-  }
-
-  /**
-   * Set table, quote and action
-   */
-  public constructor(table: string, engine: Engine) {
-    this._table = table;
-    this.engine = engine;
+  public query(dialect?: Dialect) {
+    dialect = dialect || this._engine?.dialect;
+    if (!dialect) {
+      throw Exception.for('No dialect provided');
+    }
+    return dialect.insert(this);
   }
 
   /**
@@ -48,10 +67,13 @@ export default class Insert<R = unknown> {
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.engine.query<R>([ this.query ]).then(resolve);
+    if (!this._engine) {
+      throw Exception.for('No engine provided');
+    }
+    return this._engine.query<R>([ this.query() ]).then(resolve);
   }
 
-  values(values: Record<string, Value>|Record<string, Value>[]) {
+  public values(values: Record<string, Value>|Record<string, Value>[]) {
     if (!Array.isArray(values)) {
       values = [values];
     }

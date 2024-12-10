@@ -18,7 +18,7 @@ const Pgsql: Dialect = {
    * Converts alter builder to query and values
    */
   alter(builder: Alter) {
-    const build = builder.build;
+    const build = builder.build();
     const query: string[] = [];
 
     const removeFields = build.fields.remove.map(
@@ -128,7 +128,7 @@ const Pgsql: Dialect = {
    * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
   create(builder: Create) {
-    const build = builder.build;
+    const build = builder.build();
     if (!Object.values(build.fields).length) {
       throw Exception.for('No fields provided');
     }
@@ -194,7 +194,7 @@ const Pgsql: Dialect = {
    * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
   delete(builder: Delete) {
-    const build = builder.build;
+    const build = builder.build();
     if (!build.filters.length) {
       throw Exception.for('No filters provided');
     }
@@ -217,7 +217,7 @@ const Pgsql: Dialect = {
    * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
   insert(builder: Insert) {
-    const build = builder.build;
+    const build = builder.build();
     if (build.values.length === 0) {
       throw Exception.for('No values provided');
     }
@@ -245,7 +245,7 @@ const Pgsql: Dialect = {
    * results: [{"rows":[],"fields":[{"name":"id","dataTypeID":1043}...],"affectedRows":0}]
    */
   select(builder: Select) {
-    const build = builder.build;
+    const build = builder.build();
     if (!build.table) {
       throw Exception.for('No table specified');
     }
@@ -309,7 +309,7 @@ const Pgsql: Dialect = {
    * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
   update(builder: Update) {
-    const build = builder.build;
+    const build = builder.build();
     if (!Object.keys(build.data).length) {
       throw Exception.for('No data provided');
     }

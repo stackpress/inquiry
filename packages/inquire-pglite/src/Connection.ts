@@ -97,10 +97,13 @@ export default class PGLiteConnection implements Connection {
   /**
    * Call the database. If no values are provided, use exec
    */
-  protected _query<R = unknown>(request: QueryObject, resource: PGlite|Transaction) {
+  protected async _query<R = unknown>(
+    request: QueryObject, 
+    resource: PGlite|Transaction
+  ) {
     const { query, values = [] } = request;
     return values.length === 0
-      ? resource.exec(query) as unknown as Promise<Results<R>>
-      : resource.query(query, values) as Promise<Results<R>>;
+      ? (await resource.exec(query))[0] as Results<R>
+      : await resource.query(query, values) as Results<R>;
   }
 }
