@@ -2,18 +2,20 @@
 import type { 
   Field, 
   Resolve,
+  Dialect,
   AlterFields, 
   AlterKeys, 
   AlterUnqiues, 
   AlterPrimaries
 } from '../types';
-import Engine from '../Engine';
+import type Engine from '../Engine';
+import Exception from '../Exception';
 
 export default class Alter<R = unknown> {
   /**
    * Database engine
    */
-  public readonly engine: Engine;
+  protected _engine?: Engine;
 
   /**
    * List of fields
@@ -41,31 +43,25 @@ export default class Alter<R = unknown> {
   protected _unique: AlterUnqiues = { add: {}, remove: [] };
 
   /**
-   * Converts the class data to object
+   * Sets the engine for the builder
    */
-  public get build() {
-    return {
-      fields: this._fields,
-      keys: this._keys,
-      primary: this._primary,
-      table: this._table,
-      unique: this._unique
-    }
+  public get engine() {
+    return this._engine;
   }
 
   /**
-   * Convert the builder to a query object.
+   * Sets the engine for the builder
    */
-  public get query() {
-    return this.engine.dialect.alter(this);
+  public set engine(engine: Engine | undefined) {
+    this._engine = engine;
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, engine: Engine) {
+  public constructor(table: string, engine?: Engine) {
     this._table = table;
-    this.engine = engine;
+    this._engine = engine;
   }
 
   /**
@@ -107,11 +103,35 @@ export default class Alter<R = unknown> {
   }
 
   /**
+   * Converts the class data to object
+   */
+  public build() {
+    return {
+      fields: this._fields,
+      keys: this._keys,
+      primary: this._primary,
+      table: this._table,
+      unique: this._unique
+    }
+  }
+
+  /**
    * Update a field in the table.
    */
   public changeField(name: string, field: Field) {
     this._fields.update[name] = field;
     return this;
+  }
+
+  /**
+   * Convert the builder to a query object.
+   */
+  public query(dialect?: Dialect) {
+    dialect = dialect || this._engine?.dialect;
+    if (!dialect) {
+      throw Exception.for('No dialect provided');
+    }
+    return dialect.alter(this);
   }
 
   /**
@@ -151,6 +171,9 @@ export default class Alter<R = unknown> {
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.engine.query<R>([ this.query ]).then(resolve);
+    if (!this._engine) {
+      throw Exception.for('No engine provided');
+    }
+    return this._engine.query<R>([ this.query() ]).then(resolve);
   }
 }

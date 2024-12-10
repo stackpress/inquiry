@@ -18,7 +18,7 @@ const Sqlite: Dialect = {
    * Converts alter builder to query and values
    */
   alter(builder: Alter) {
-    const build = builder.build;
+    const build = builder.build();
     const query: string[] = [];
 
     const removeFields = build.fields.remove.map(
@@ -127,7 +127,7 @@ const Sqlite: Dialect = {
    * Converts create builder to query and values
    */
   create(builder: Create) {
-    const build = builder.build;
+    const build = builder.build();
     if (!Object.values(build.fields).length) {
       throw Exception.for('No fields provided');
     }
@@ -192,7 +192,7 @@ const Sqlite: Dialect = {
    * Converts delete builder to query and values
    */
   delete(builder: Delete) {
-    const build = builder.build;
+    const build = builder.build();
     if (!build.filters.length) {
       throw Exception.for('No filters provided');
     }
@@ -214,7 +214,7 @@ const Sqlite: Dialect = {
    * Converts insert builder to query and values
    */
   insert(builder: Insert) {
-    const build = builder.build;
+    const build = builder.build();
     if (build.values.length === 0) {
       throw Exception.for('No values provided');
     }
@@ -241,7 +241,7 @@ const Sqlite: Dialect = {
    * Converts select builder to query and values
    */
   select(builder: Select) {
-    const build = builder.build;
+    const build = builder.build();
     if (!build.table) {
       throw Exception.for('No table specified');
     }
@@ -304,7 +304,7 @@ const Sqlite: Dialect = {
    * Converts update builder to query and values
    */
   update(builder: Update) {
-    const build = builder.build;
+    const build = builder.build();
     if (!Object.keys(build.data).length) {
       throw Exception.for('No data provided');
     }

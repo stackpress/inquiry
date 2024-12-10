@@ -1,12 +1,13 @@
 //common
-import type { Field, Resolve } from '../types';
+import type { Field, Resolve, Dialect } from '../types';
 import Engine from '../Engine';
+import Exception from '../Exception';
 
 export default class Create<R = unknown> {
   /**
    * Database engine
    */
-  public readonly engine: Engine;
+  protected _engine?: Engine;
   
   /**
    * List of fields
@@ -34,31 +35,25 @@ export default class Create<R = unknown> {
   protected _unique: Record<string, string[]> = {};
 
   /**
-   * Converts the class data to object
+   * Sets the engine for the builder
    */
-  public get build() {
-    return {
-      fields: this._fields,
-      keys: this._keys,
-      primary: this._primary,
-      table: this._table,
-      unique: this._unique
-    }
+  public get engine() {
+    return this._engine;
   }
 
   /**
-   * Convert the builder to a query object.
+   * Sets the engine for the builder
    */
-  public get query() {
-    return this.engine.dialect.create(this);
+  public set engine(engine: Engine | undefined) {
+    this._engine = engine;
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, engine: Engine) {
+  public constructor(table: string, engine?: Engine) {
     this._table = table;
-    this.engine = engine;
+    this._engine = engine;
   }
 
   /**
@@ -100,10 +95,37 @@ export default class Create<R = unknown> {
   }
 
   /**
+   * Converts the class data to object
+   */
+  public build() {
+    return {
+      fields: this._fields,
+      keys: this._keys,
+      primary: this._primary,
+      table: this._table,
+      unique: this._unique
+    }
+  }
+
+  /**
+   * Convert the builder to a query object.
+   */
+  public query(dialect?: Dialect) {
+    dialect = dialect || this._engine?.dialect;
+    if (!dialect) {
+      throw Exception.for('No dialect provided');
+    }
+    return dialect.create(this);
+  }
+
+  /**
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.engine.query<R>([ this.query ]).then(resolve);
+    if (!this._engine) {
+      throw Exception.for('No engine provided');
+    }
+    return this._engine.query<R>([ this.query() ]).then(resolve);
   }
 }

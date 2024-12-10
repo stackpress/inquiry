@@ -2,20 +2,22 @@
 import type { 
   Value, 
   Resolve,
+  Dialect,
   FlatValue 
 } from '../types';
 import Engine from '../Engine';
+import Exception from '../Exception';
 
 export default class Update<R = unknown> {
-  /**
-   * Database engine
-   */
-  public readonly engine: Engine;
-
   /**
    * The data to update.
    */
   protected _data: Record<string, Value> = {};
+
+  /**
+   * Database engine
+   */
+  protected _engine?: Engine;
   
   /**
    * The filters to apply.
@@ -28,9 +30,31 @@ export default class Update<R = unknown> {
   protected _table: string;
 
   /**
+   * Sets the engine for the builder
+   */
+  public get engine() {
+    return this._engine;
+  }
+
+  /**
+   * Sets the engine for the builder
+   */
+  public set engine(engine: Engine | undefined) {
+    this._engine = engine;
+  }
+
+  /**
+   * Set table, quote and action
+   */
+  public constructor(table: string, engine?: Engine) {
+    this._table = table;
+    this._engine = engine;
+  }
+
+  /**
    * Converts the class data to object
    */
-  public get build() {
+  public build() {
     return {
       data: this._data,
       filters: this._filters,
@@ -41,16 +65,12 @@ export default class Update<R = unknown> {
   /**
    * Convert the builder to a query object.
    */
-  public get query() {
-    return this.engine.dialect.update(this);
-  }
-
-  /**
-   * Set table, quote and action
-   */
-  public constructor(table: string, engine: Engine) {
-    this._table = table;
-    this.engine = engine;
+  public query(dialect?: Dialect) {
+    dialect = dialect || this._engine?.dialect;
+    if (!dialect) {
+      throw Exception.for('No dialect provided');
+    }
+    return dialect.update(this);
   }
 
   /**
@@ -66,7 +86,10 @@ export default class Update<R = unknown> {
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.engine.query<R>([ this.query ]).then(resolve);
+    if (!this._engine) {
+      throw Exception.for('No engine provided');
+    }
+    return this._engine.query<R>([ this.query() ]).then(resolve);
   }
 
   /**

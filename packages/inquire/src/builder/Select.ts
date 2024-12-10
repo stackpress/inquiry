@@ -2,21 +2,23 @@
 import type { 
   Order, 
   Resolve,
+  Dialect,
   Relation, 
   FlatValue
 } from '../types';
 import Engine from '../Engine';
+import Exception from '../Exception';
 
 export default class Select<R = unknown> {
-  /**
-   * Database engine
-   */
-  public readonly engine: Engine;
-
   /**
    * The columns to select.
    */
   protected _columns: string[] = [];
+
+  /**
+   * Database engine
+   */
+  protected _engine?: Engine;
   
   /**
    * The start
@@ -49,9 +51,35 @@ export default class Select<R = unknown> {
   protected _table?: [string, string];
 
   /**
+   * Sets the engine for the builder
+   */
+  public get engine() {
+    return this._engine;
+  }
+
+  /**
+   * Sets the engine for the builder
+   */
+  public set engine(engine: Engine | undefined) {
+    this._engine = engine;
+  }
+  
+  /**
+   * Set select, quote and action
+   */
+  public constructor(select: string|string[] = '*', engine?: Engine) {
+    if (Array.isArray(select)) {
+      this._columns = select;
+    } else {
+      this._columns = [select];
+    }
+    this._engine = engine;
+  }
+
+  /**
    * Converts the class data to object
    */
-  public get build() {
+  public build() {
     return {
       columns: this._columns,
       filters: this._filters,
@@ -61,25 +89,6 @@ export default class Select<R = unknown> {
       sort: this._sort,
       table: this._table
     }
-  }
-
-  /**
-   * Convert the builder to a query object.
-   */
-  public get query() {
-    return this.engine.dialect.select(this);
-  }
-  
-  /**
-   * Set select, quote and action
-   */
-  public constructor(select: string|string[] = '*', engine: Engine) {
-    if (Array.isArray(select)) {
-      this._columns = select;
-    } else {
-      this._columns = [select];
-    }
-    this.engine = engine;
   }
 
   /**
@@ -123,11 +132,25 @@ export default class Select<R = unknown> {
   }
 
   /**
+   * Convert the builder to a query object.
+   */
+  public query(dialect?: Dialect) {
+    dialect = dialect || this._engine?.dialect;
+    if (!dialect) {
+      throw Exception.for('No dialect provided');
+    }
+    return dialect.select(this);
+  }
+
+  /**
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.engine.query<R>([ this.query ]).then(resolve);
+    if (!this._engine) {
+      throw Exception.for('No engine provided');
+    }
+    return this._engine.query<R>([ this.query() ]).then(resolve);
   }
 
   /**
