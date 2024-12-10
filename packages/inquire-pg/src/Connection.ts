@@ -113,6 +113,6 @@ export default class PGConnection implements Connection {
    */
   protected _query<R = unknown>(request: QueryObject) {
     const { query, values = [] } = request;
-    return this.resource.query(query, values) as unknown as Promise<Results<R>>;
+    return this.resource.query(query, values) as Promise<Results<R>>;
   }
 }

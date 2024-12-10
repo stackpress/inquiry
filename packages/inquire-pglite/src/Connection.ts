@@ -101,6 +101,6 @@ export default class PGLiteConnection implements Connection {
     const { query, values = [] } = request;
     return values.length === 0
       ? resource.exec(query) as unknown as Promise<Results<R>>
-      : resource.query(query, values) as unknown as Promise<Results<R>>;
+      : resource.query(query, values) as Promise<Results<R>>;
   }
 }

@@ -1,11 +1,12 @@
 //common
-import type { Value, Resolve, Connection } from '../types';
+import type { Value, Resolve } from '../types';
+import Engine from '../Engine';
 
 export default class Insert<R = unknown> {
   /**
-   * Database connection
+   * Database engine
    */
-  public readonly connection: Connection;
+  public readonly engine: Engine;
   
   /**
    * The table to delete from.
@@ -31,15 +32,15 @@ export default class Insert<R = unknown> {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.connection.dialect.insert(this);
+    return this.engine.dialect.insert(this);
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, connection: Connection) {
+  public constructor(table: string, engine: Engine) {
     this._table = table;
-    this.connection = connection;
+    this.engine = engine;
   }
 
   /**
@@ -47,7 +48,7 @@ export default class Insert<R = unknown> {
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.connection.query<R>([ this.query ]).then(resolve);
+    return this.engine.query<R>([ this.query ]).then(resolve);
   }
 
   values(values: Record<string, Value>|Record<string, Value>[]) {

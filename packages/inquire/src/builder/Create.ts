@@ -1,11 +1,12 @@
 //common
-import type { Field, Resolve, Connection } from '../types';
+import type { Field, Resolve } from '../types';
+import Engine from '../Engine';
 
 export default class Create<R = unknown> {
   /**
-   * Database connection
+   * Database engine
    */
-  public readonly connection: Connection;
+  public readonly engine: Engine;
   
   /**
    * List of fields
@@ -49,15 +50,15 @@ export default class Create<R = unknown> {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.connection.dialect.create(this);
+    return this.engine.dialect.create(this);
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, connection: Connection) {
+  public constructor(table: string, engine: Engine) {
     this._table = table;
-    this.connection = connection;
+    this.engine = engine;
   }
 
   /**
@@ -103,6 +104,6 @@ export default class Create<R = unknown> {
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.connection.query<R>([ this.query ]).then(resolve);
+    return this.engine.query<R>([ this.query ]).then(resolve);
   }
 }

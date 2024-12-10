@@ -2,15 +2,15 @@
 import type { 
   Value, 
   Resolve,
-  FlatValue, 
-  Connection 
+  FlatValue 
 } from '../types';
+import Engine from '../Engine';
 
 export default class Update<R = unknown> {
   /**
-   * Database connection
+   * Database engine
    */
-  public readonly connection: Connection;
+  public readonly engine: Engine;
 
   /**
    * The data to update.
@@ -42,15 +42,15 @@ export default class Update<R = unknown> {
    * Convert the builder to a query object.
    */
   public get query() {
-    return this.connection.dialect.update(this);
+    return this.engine.dialect.update(this);
   }
 
   /**
    * Set table, quote and action
    */
-  public constructor(table: string, connection: Connection) {
+  public constructor(table: string, engine: Engine) {
     this._table = table;
-    this.connection = connection;
+    this.engine = engine;
   }
 
   /**
@@ -66,7 +66,7 @@ export default class Update<R = unknown> {
    * query and values and call the action.
    */
   public then(resolve: Resolve<R[]>) {
-    return this.connection.query<R>([ this.query ]).then(resolve);
+    return this.engine.query<R>([ this.query ]).then(resolve);
   }
 
   /**
