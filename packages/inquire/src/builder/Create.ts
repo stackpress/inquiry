@@ -1,5 +1,5 @@
 //common
-import type { Field, Resolve, Dialect } from '../types';
+import type { Field, Resolve, Dialect, ForeignKey } from '../types';
 import Engine from '../Engine';
 import Exception from '../Exception';
 
@@ -13,6 +13,11 @@ export default class Create<R = unknown> {
    * List of fields
    */
   protected _fields: Record<string, Field> = {};
+
+  /**
+   * List of foreign key definitions
+   */
+  protected _foreign: Record<string, ForeignKey> = {};
 
   /**
    * List of key indexes
@@ -65,6 +70,14 @@ export default class Create<R = unknown> {
   }
 
   /**
+   * Add a foreign key to the table.
+   */
+  public addForeignKey(name: string, foriegnKey: ForeignKey) {
+    this._foreign[name] = foriegnKey;
+    return this;
+  }
+
+  /**
    * Add a key index to the table.
    */
   public addKey(name: string, field: string|string[]) {
@@ -100,6 +113,7 @@ export default class Create<R = unknown> {
   public build() {
     return {
       fields: this._fields,
+      foreign: this._foreign,
       keys: this._keys,
       primary: this._primary,
       table: this._table,
@@ -126,6 +140,6 @@ export default class Create<R = unknown> {
     if (!this._engine) {
       throw Exception.for('No engine provided');
     }
-    return this._engine.query<R>([ this.query() ]).then(resolve);
+    return this._engine.query<R>(this.query()).then(resolve);
   }
 }
