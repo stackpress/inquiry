@@ -3,10 +3,12 @@ import type {
   Field, 
   Resolve,
   Dialect,
+  ForeignKey,
   AlterFields, 
   AlterKeys, 
   AlterUnqiues, 
-  AlterPrimaries
+  AlterPrimaries,
+  AlterForeignKeys
 } from '../types';
 import type Engine from '../Engine';
 import Exception from '../Exception';
@@ -43,6 +45,11 @@ export default class Alter<R = unknown> {
   protected _unique: AlterUnqiues = { add: {}, remove: [] };
 
   /**
+   * List of foreign keys
+   */
+  protected _foreign: AlterForeignKeys = { add: {}, remove: [] };
+
+  /**
    * Sets the engine for the builder
    */
   public get engine() {
@@ -69,6 +76,14 @@ export default class Alter<R = unknown> {
    */
   public addField(name: string, field: Field) {
     this._fields.add[name] = field;
+    return this;
+  }
+
+  /**
+   * Add a foreign key to the table.
+   */
+  public addForeignKey(name: string, foriegnKey: ForeignKey) {
+    this._foreign.add[name] = foriegnKey;
     return this;
   }
 
@@ -108,6 +123,7 @@ export default class Alter<R = unknown> {
   public build() {
     return {
       fields: this._fields,
+      foreign: this._foreign,
       keys: this._keys,
       primary: this._primary,
       table: this._table,
@@ -143,6 +159,14 @@ export default class Alter<R = unknown> {
   }
 
   /**
+   * Remove key from the table.
+   */
+  public removeForeignKey(name: string) {
+    this._foreign.remove.push(name);
+    return this;
+  }
+
+  /**
    * Remove a key index from the table.
    */
   public removeKey(name: string) {
@@ -174,6 +198,6 @@ export default class Alter<R = unknown> {
     if (!this._engine) {
       throw Exception.for('No engine provided');
     }
-    return this._engine.query<R>([ this.query() ]).then(resolve);
+    return this._engine.query<R>(this.query()).then(resolve);
   }
 }

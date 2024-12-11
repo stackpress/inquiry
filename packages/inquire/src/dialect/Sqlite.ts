@@ -6,35 +6,111 @@ import type Insert from '../builder/Insert';
 import type Select from '../builder/Select';
 import type Update from '../builder/Update';
 //common
-import type { Join, Value, FlatValue, Dialect } from '../types';
+import type { 
+  Join, 
+  Value, 
+  FlatValue, 
+  Dialect, 
+  QueryObject 
+} from '../types';
 import Exception from '../Exception';
 import { joins } from '../helpers';
 
 //The character used to quote identifiers.
 const q = '`';
 
+export const typemap: Record<string, string> = {
+  object: 'TEXT',
+  hash: 'TEXT',
+  json: 'TEXT',
+  char: 'CHAR',
+  string: 'VARCHAR',
+  varchar: 'VARCHAR',
+  text: 'TEXT',
+  bool: 'INTEGER',
+  boolean: 'INTEGER',
+  number: 'INTEGER',
+  int: 'INTEGER',
+  integer: 'INTEGER',
+  float: 'REAL',
+  date: 'INTEGER',
+  datetime: 'INTEGER',
+  time: 'INTEGER'
+};
+
+export function getType(key: string, length?: number | [ number, number ]) {
+  //try to infer the type from the key
+  let type = typemap[key.toLowerCase()] || key.toUpperCase();
+  //if length is a number...
+  if (!Array.isArray(length)) {
+    //if char, varchar
+    if (type === 'CHAR' || type === 'VARCHAR') {
+      //make sure there's a length
+      length = length || 255;
+    }
+    //if int
+    if (type === 'INTEGER' || type === 'REAL') {
+      length = undefined;
+    }
+  }
+  return { type, length };
+};
+
 const Sqlite: Dialect = {
   /**
    * Converts alter builder to query and values
+   * 
+   * NOTES:
+   * - SQLite does not support modifying NOT NULL directly.
+   * - SQLite does not support modifying DEFAULT directly.
+   * - SQLite does not support modifying AUTOINCREMENT directly.
+   * - SQLite does not support adding or removing a foreign key.
+   * - SQLite does not support adding or removing a primary key constraint.
+   * 
+   * Alter Functions:
+   * - ALTER TABLE table_name ADD COLUMN column_name data_type [column_constraint];
+   * - ALTER TABLE table_name DROP COLUMN column_name;
+   * - ALTER TABLE table_name ALTER COLUMN column_name SET DATA TYPE data_type;
+   * - CREATE INDEX new_index_name ON table_name(new_column1, new_column2);
+   * - CREATE UNIQUE INDEX new_index_name ON table_name(new_column1, new_column2);
+   * - DROP INDEX index_name;
    */
   alter(builder: Alter) {
     const build = builder.build();
-    const query: string[] = [];
+    const transactions: QueryObject[] = [];
 
-    const removeFields = build.fields.remove.map(
-      name => `DROP ${q}${name}${q}`
-    );
+    //----------------------------------------------------------------//
+    // Remove columns
+    //
+    // ALTER TABLE table_name DROP COLUMN column_name;
 
-    const addFields = Object.keys(build.fields.add).map(name => {
+    build.fields.remove.forEach(name => {
+      transactions.push({
+        query: `ALTER TABLE ${build.table} DROP COLUMN ${q}${name}${q}`,
+        values: []
+      });
+    });
+
+    //----------------------------------------------------------------//
+    // Add columns
+    //
+    // ALTER TABLE table_name ADD COLUMN column_name data_type [column_constraint];
+
+    Object.keys(build.fields.add).forEach(name => {
       const field = build.fields.add[name];
       const column: string[] = [];
+      const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
+      if (Array.isArray(length)) {
+        column.push(`${type}(${length.join(', ')})`);
+      } else if (length) {
+        column.push(`${type}(${length})`);
+      } else {
+        column.push(type);
+      }
       field.attribute && column.push(field.attribute);
-      field.unsigned && column.push('UNSIGNED');
       field.nullable && column.push('NOT NULL');
-      field.autoIncrement && column.push('AUTO_INCREMENT');
+      field.autoIncrement && column.push('AUTOINCREMENT');
       if (field.default) {
         if (!isNaN(Number(field.default))) {
           column.push(`DEFAULT ${field.default}`);
@@ -45,82 +121,84 @@ const Sqlite: Dialect = {
         column.push('DEFAULT NULL');
       }
 
-      return `ADD COLUMN ${column.join(' ')}`;
+      transactions.push({
+        query: `ALTER TABLE ${build.table} ADD COLUMN ${column.join(' ')}`,
+        values: []
+      });
     });
 
-    const changeFields = Object.keys(build.fields.update).map(name => {
-      const field = build.fields.add[name];
-      const column: string[] = [];
-      column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
-      field.attribute && column.push(field.attribute);
-      field.unsigned && column.push('UNSIGNED');
-      field.nullable && column.push('NOT NULL');
-      field.autoIncrement && column.push('AUTO_INCREMENT');
-      if (field.default) {
-        if (!isNaN(Number(field.default))) {
-          column.push(`DEFAULT ${field.default}`);
-        } else {
-          column.push(`DEFAULT '${field.default}'`);
-        }
-      } else if (field.nullable) {
-        column.push('DEFAULT NULL');
+    //----------------------------------------------------------------//
+    // Update columns
+    //
+    // ALTER TABLE table_name ALTER COLUMN column_name SET DATA TYPE data_type;
+
+    Object.keys(build.fields.update).map(name => {
+      const field = build.fields.update[name];
+      let { type, length } = getType(field.type, field.length);
+      if (Array.isArray(length)) {
+        type = `${type}(${length.join(', ')})`;
+      } else if (length) {
+        type = `${type}(${length})`;
       }
-
-      return `CHANGE COLUMN ${column.join(' ')}`;
+      //SQLite does not support modifying column constraints (like NOT NULL, DEFAULT) directly.
+      transactions.push({
+        query: `ALTER TABLE ${q}${build.table}${q} ALTER COLUMN ${q}${name}${q} SET DATA TYPE ${type}`,
+        values: []
+      });
     });
 
-    const removePrimaries = build.primary.remove.map(
-      name => `DROP PRIMARY KEY ${q}${name}${q}`
-    );
+    //----------------------------------------------------------------//
+    // Remove unique keys
+    //
+    // DROP INDEX index_name;
 
-    const addPrimaries = `ADD PRIMARY KEY (${q}${build.primary.remove.join(`${q}, ${q}`)}${q})`;
+    build.unique.remove.forEach(name => {
+      transactions.push({
+        query: `DROP INDEX ${q}${name}${q}`,
+        values: []
+      });
+    });
 
-    const removeUniques = build.unique.remove.map(
-      name => `DROP UNIQUE ${q}${name}${q}`
-    );
+    //----------------------------------------------------------------//
+    // Add unique keys
+    //
+    // CREATE UNIQUE INDEX new_index_name ON table_name(new_column1, new_column2);
 
-    const addUniques = Object.keys(build.unique.add).map(
-      key => `ADD UNIQUE ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
-    );
+    Object.entries(build.unique.add).forEach(([name, values]) => {
+      transactions.push({ 
+        query: `CREATE UNIQUE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        values: [] 
+      });
+    });
 
-    const removeKeys = build.keys.remove.map(
-      name => `DROP INDEX ${q}${name}${q}`
-    );
+    //----------------------------------------------------------------//
+    // Remove keys
+    //
+    // DROP INDEX index_name;
 
-    const addKeys = Object.keys(build.keys.add).map(
-      key => `ADD INDEX ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
-    );
+    build.keys.remove.forEach(name => {
+      transactions.push({
+        query: `DROP INDEX ${q}${name}${q}`,
+        values: []
+      });
+    });
 
-    if (!removeFields.length
-      && !addFields.length
-      && !changeFields.length
-      && !removePrimaries.length
-      && !addPrimaries.length
-      && !removeUniques.length
-      && !addUniques.length
-      && !removeKeys.length
-      && !addKeys.length
-    ) {
+    //----------------------------------------------------------------//
+    // Add keys
+    //
+    // CREATE INDEX new_index_name ON table_name(new_column1, new_column2);
+
+    Object.entries(build.keys.add).forEach(([name, values]) => {
+      transactions.push({ 
+        query: `CREATE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        values: [] 
+      });
+    });
+
+    if (transactions.length === 0) {
       throw Exception.for('No alterations made.')
     }
-
-    query.push(
-      ...removeFields,
-      ...addFields,
-      ...changeFields,
-      ...removePrimaries,
-      ...addPrimaries,
-      ...removeUniques,
-      ...addUniques,
-      ...removeKeys,
-      ...addKeys
-    );
-    return { 
-      query: `ALTER TABLE ${build.table} (${query.join(', ')})`, 
-      values: [] 
-    };
+    return transactions;
   },
 
   /**
@@ -132,22 +210,29 @@ const Sqlite: Dialect = {
       throw Exception.for('No fields provided');
     }
 
-    const query: string[] = [];
+    const transactions: QueryObject[] = [];
 
+    //----------------------------------------------------------------//
+    // Create table
+    //
+    // CREATE TABLE IF NOT EXISTS table_name (
+    //   column1_name data_type [column_constraint]
+    // )
     const fields = Object.keys(build.fields).map(name => {
       const field = build.fields[name];
       const column: string[] = [];
+      const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      if (field.type && field.length) {
-        column.push(`${field.type}(${field.length})`);
+      if (Array.isArray(length)) {
+        column.push(`${type}(${length.join(', ')})`);
+      } else if (length) {
+        column.push(`${type}(${length})`);
       } else {
-        field.type && column.push(field.type);
-        field.length && column.push(`(${field.length})`);
+        column.push(type);
       }
       field.attribute && column.push(field.attribute);
-      field.unsigned && column.push('UNSIGNED');
       field.nullable && column.push('NOT NULL');
-      field.autoIncrement && column.push('AUTO_INCREMENT');
+      field.autoIncrement && column.push('AUTOINCREMENT');
       if (field.default) {
         if (!isNaN(Number(field.default))) {
           column.push(`DEFAULT ${field.default}`);
@@ -158,34 +243,60 @@ const Sqlite: Dialect = {
         column.push('DEFAULT NULL');
       }
 
+      if (build.primary.includes(name)) {
+        column.push('PRIMARY KEY');
+      }
+
       return column.join(' ');
-    }).join(', ');
+    });
 
-    query.push(fields);
-  
-    if (build.primary.length) {
-      query.push(`, PRIMARY KEY (${build.primary
-        .map(key => `${q}${key}${q}`)
-        .join(', ')})`
-      );
+    //----------------------------------------------------------------//
+    // Add foreign keys
+    //
+    // FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    // ON DELETE CASCADE
+    // ON UPDATE RESTRICT
+    if (Object.keys(build.foreign).length) {
+      fields.push(...Object.values(build.foreign).map(info => {
+        return [
+          `FOREIGN KEY (${q}${info.local}${q})`,
+          `REFERENCES ${q}${info.table}${q}(${q}${info.foreign}${q})`,
+          info.delete ? `ON DELETE ${info.delete}`: '', 
+          info.update ? `ON UPDATE ${info.update}`: ''
+        ].join(' ');
+      }));
     }
 
-    if (build.unique.length) {
-      query.push(Object.keys(build.unique).map(
-        key => `, UNIQUE KEY ${q}${key}${q} (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
-      ).join(', '));
-    }
-
-    if (build.keys.length) {
-      query.push(Object.keys(build.keys).map(
-        key => `, KEY ${q}${key}${q} (${q}${build.keys[key].join(`${q}, ${q}`)}${q})`
-      ).join(', '));
-    }
-
-    return { 
-      query: `CREATE TABLE IF NOT EXISTS ${build.table} (${query.join(' ')})`, 
+    transactions.push({ 
+      query: `CREATE TABLE IF NOT EXISTS ${q}${build.table}${q} (${fields.join(', ')})`, 
       values: [] 
-    };
+    });
+
+    //----------------------------------------------------------------//
+    // Add unique keys
+    //
+    // CREATE UNIQUE INDEX new_index_name ON table_name(new_column1, new_column2);
+
+    Object.entries(build.unique).forEach(([name, values]) => {
+      transactions.push({ 
+        query: `CREATE UNIQUE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        values: [] 
+      });
+    });
+
+    //----------------------------------------------------------------//
+    // Add keys
+    //
+    // CREATE INDEX new_index_name ON table_name(new_column1, new_column2);
+
+    Object.entries(build.keys).forEach(([name, values]) => {
+      transactions.push({ 
+        query: `CREATE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        values: [] 
+      });
+    });
+
+    return transactions;
   },
 
   /**

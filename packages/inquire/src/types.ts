@@ -13,7 +13,7 @@ import type Update from './builder/Update';
 
 export type Field = {
   type: string,
-  length?: number,
+  length?: number | [ number, number ],
   attribute?: string,
   default?: string|number,
   nullable?: boolean,
@@ -28,6 +28,14 @@ export type Relation = {
   as: string, 
   from: string, 
   to: string 
+};
+
+export type ForeignKey = {
+  local: string, // local table column name ie. 'customer_id'
+  foreign: string, // foreign table column name ie. 'id'
+  table: string, // foreign table name ie. 'table_name'
+  delete?: string, // ON DELETE CASCADE
+  update?: string // ON UPDATE RESTRICT
 };
 
 export type AlterFields = {
@@ -48,6 +56,11 @@ export type AlterUnqiues = {
 
 export type AlterPrimaries = {
   add: string[],
+  remove: string[]
+};
+
+export type AlterForeignKeys = {
+  add: Record<string, ForeignKey>,
   remove: string[]
 };
 
@@ -81,8 +94,8 @@ export type Join = 'inner'
 // Dialect Types
 
 export type Dialect = {
-  alter(builder: Alter): QueryObject;
-  create(builder: Create): QueryObject;
+  alter(builder: Alter): QueryObject[];
+  create(builder: Create): QueryObject[];
   delete(builder: Delete): QueryObject;
   insert(builder: Insert): QueryObject;
   select(builder: Select): QueryObject;

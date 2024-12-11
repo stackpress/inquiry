@@ -6,12 +6,63 @@ import type Insert from '../builder/Insert';
 import type Select from '../builder/Select';
 import type Update from '../builder/Update';
 //common
-import type { Join, Value, FlatValue, Dialect } from '../types';
+import type { 
+  Join, 
+  Value, 
+  FlatValue, 
+  Dialect
+} from '../types';
 import Exception from '../Exception';
 import { joins } from '../helpers';
 
 //The character used to quote identifiers.
 const q = '`';
+
+export const typemap: Record<string, string> = {
+  object: 'JSON',
+  hash: 'JSON',
+  json: 'JSON',
+  char: 'CHAR',
+  string: 'VARCHAR',
+  varchar: 'VARCHAR',
+  text: 'TEXT',
+  bool: 'BOOLEAN',
+  boolean: 'BOOLEAN',
+  number: 'INT',
+  int: 'INT',
+  integer: 'INT',
+  float: 'FLOAT',
+  date: 'DATE',
+  datetime: 'DATETIME',
+  time: 'TIME'
+};
+
+export function getType(key: string, length?: number | [ number, number ]) {
+  //try to infer the type from the key
+  let type = typemap[key.toLowerCase()] || key.toUpperCase();
+  //if length is a number...
+  if (!Array.isArray(length)) {
+    //if char, varchar
+    if (type === 'CHAR' || type === 'VARCHAR') {
+      //make sure there's a length
+      length = length || 255;
+    //if number
+    } else if (type === 'INT' || type === 'FLOAT') {
+      //make sure there's a length
+      length = length || 11;
+    }
+    //if int
+    if (type === 'INT') {
+      //determine what kind of int
+      if (length === 1) {
+        type = 'TINYINT';
+      } else if (length && length > 11) {
+        type = 'BIGINT';
+      }
+    }
+  }
+  return { type, length };
+};
 
 const Mysql: Dialect = {
   /**
@@ -21,9 +72,19 @@ const Mysql: Dialect = {
     const build = builder.build();
     const query: string[] = [];
 
+    //----------------------------------------------------------------//
+    // Drop field
+    //
+    // DROP column1_name
+
     const removeFields = build.fields.remove.map(
       name => `DROP ${q}${name}${q}`
     );
+
+    //----------------------------------------------------------------//
+    // Add field
+    //
+    // ADD COLUMN column1_name data_type(length) [column_constraint]
 
     const addFields = Object.keys(build.fields.add).map(name => {
       const field = build.fields.add[name];
@@ -48,6 +109,11 @@ const Mysql: Dialect = {
       return `ADD COLUMN ${column.join(' ')}`;
     });
 
+    //----------------------------------------------------------------//
+    // Change field
+    //
+    // CHANGE COLUMN column1_name data_type(length) [column_constraint]
+
     const changeFields = Object.keys(build.fields.update).map(name => {
       const field = build.fields.add[name];
       const column: string[] = [];
@@ -71,27 +137,81 @@ const Mysql: Dialect = {
       return `CHANGE COLUMN ${column.join(' ')}`;
     });
 
+    //----------------------------------------------------------------//
+    // Drop primary key
+    //
+    // DROP PRIMARY KEY column1_name
+
     const removePrimaries = build.primary.remove.map(
       name => `DROP PRIMARY KEY ${q}${name}${q}`
     );
 
+    //----------------------------------------------------------------//
+    // Add primary key
+    //
+    // ADD PRIMARY KEY (column1_name, column2_name)
+
     const addPrimaries = `ADD PRIMARY KEY (${q}${build.primary.remove.join(`${q}, ${q}`)}${q})`;
+
+    //----------------------------------------------------------------//
+    // Drop unique key
+    //
+    // DROP UNIQUE column1_name
 
     const removeUniques = build.unique.remove.map(
       name => `DROP UNIQUE ${q}${name}${q}`
     );
 
+    //----------------------------------------------------------------//
+    // Add unique key
+    //
+    // ADD UNIQUE column1_name (column1_name, column2_name)
+
     const addUniques = Object.keys(build.unique.add).map(
       key => `ADD UNIQUE ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
     );
+
+    //----------------------------------------------------------------//
+    // Drop key
+    //
+    // DROP INDEX column1_name
 
     const removeKeys = build.keys.remove.map(
       name => `DROP INDEX ${q}${name}${q}`
     );
 
+    //----------------------------------------------------------------//
+    // Add key
+    //
+    // ADD INDEX column1_name (column1_name, column2_name)
+
     const addKeys = Object.keys(build.keys.add).map(
       key => `ADD INDEX ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
     );
+
+    //----------------------------------------------------------------//
+    // Drop foreign key
+    //
+    // DROP FOREIGN KEY column1_name
+
+    const removeForeignKeys = build.foreign.remove.map(
+      name => `DROP FOREIGN KEY ${q}${name}${q}`
+    );
+
+    //----------------------------------------------------------------//
+    // Add foreign keys
+    //
+    // FOREIGN KEY (column1_name) REFERENCES table_name(column1_name)
+    // ON DELETE CASCADE
+    // ON UPDATE RESTRICT
+    const addForeignKeys = Object.entries(build.foreign.add).map(([ name, info ]) => {
+      return [
+        `ADD CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q})`,
+        `REFERENCES ${q}${info.table}${q}(${q}${info.foreign}${q})`,
+        info.delete ? `ON DELETE ${info.delete}`: '', 
+        info.update ? `ON UPDATE ${info.update}`: ''
+      ].join(' ');
+    }).join(', ');
 
     if (!removeFields.length
       && !addFields.length
@@ -102,6 +222,8 @@ const Mysql: Dialect = {
       && !addUniques.length
       && !removeKeys.length
       && !addKeys.length
+      && !removeForeignKeys.length
+      && !addForeignKeys.length
     ) {
       throw Exception.for('No alterations made.')
     }
@@ -115,12 +237,16 @@ const Mysql: Dialect = {
       ...removeUniques,
       ...addUniques,
       ...removeKeys,
-      ...addKeys
+      ...addKeys,
+      ...removeForeignKeys,
+      ...addForeignKeys
     );
-    return { 
-      query: `ALTER TABLE ${build.table} (${query.join(', ')})`, 
-      values: [] 
-    };
+    return [
+      { 
+        query: `ALTER TABLE ${build.table} (${query.join(', ')})`, 
+        values: [] 
+      }
+    ];
   },
 
   /**
@@ -134,15 +260,22 @@ const Mysql: Dialect = {
 
     const query: string[] = [];
 
+    //----------------------------------------------------------------//
+    // Add field
+    //
+    // column1_name data_type(length) [column_constraint]
+
     const fields = Object.keys(build.fields).map(name => {
       const field = build.fields[name];
       const column: string[] = [];
+      const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      if (field.type && field.length) {
-        column.push(`${field.type}(${field.length})`);
+      if (Array.isArray(length)) {
+        column.push(`${type}(${length.join(', ')})`);
+      } else if (length) {
+        column.push(`${type}(${length})`);
       } else {
-        field.type && column.push(field.type);
-        field.length && column.push(`(${field.length})`);
+        column.push(type);
       }
       field.attribute && column.push(field.attribute);
       field.unsigned && column.push('UNSIGNED');
@@ -162,6 +295,11 @@ const Mysql: Dialect = {
     }).join(', ');
 
     query.push(fields);
+
+    //----------------------------------------------------------------//
+    // Add primary keys
+    //
+    // PRIMARY KEY (column1_name, column2_name)
   
     if (build.primary.length) {
       query.push(`, PRIMARY KEY (${build.primary
@@ -170,22 +308,51 @@ const Mysql: Dialect = {
       );
     }
 
-    if (build.unique.length) {
+    //----------------------------------------------------------------//
+    // Add unique keys
+    //
+    // UNIQUE KEY name (column1_name, column2_name)
+
+    if (Object.keys(build.keys).length) {
       query.push(Object.keys(build.unique).map(
         key => `, UNIQUE KEY ${q}${key}${q} (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
       ).join(', '));
     }
 
-    if (build.keys.length) {
+    //----------------------------------------------------------------//
+    // Add keys
+    //
+    // KEY name (column1_name, column2_name)
+
+    if (Object.keys(build.keys).length) {
       query.push(Object.keys(build.keys).map(
         key => `, KEY ${q}${key}${q} (${q}${build.keys[key].join(`${q}, ${q}`)}${q})`
       ).join(', '));
     }
 
-    return { 
-      query: `CREATE TABLE IF NOT EXISTS ${build.table} (${query.join(' ')})`, 
-      values: [] 
-    };
+    //----------------------------------------------------------------//
+    // Add foreign keys
+    //
+    // FOREIGN KEY (column1_name) REFERENCES table_name(column1_name)
+    // ON DELETE CASCADE
+    // ON UPDATE RESTRICT
+    if (Object.keys(build.foreign).length) {
+      query.push(Object.entries(build.foreign).map(([ name, info ]) => {
+        return [
+          `, CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q})`,
+          `REFERENCES ${q}${info.table}${q}(${q}${info.foreign}${q})`,
+          info.delete ? `ON DELETE ${info.delete}`: '', 
+          info.update ? `ON UPDATE ${info.update}`: ''
+        ].join(' ');
+      }).join(', '));
+    }
+
+    return [
+      { 
+        query: `CREATE TABLE IF NOT EXISTS ${build.table} (${query.join(' ')})`, 
+        values: [] 
+      }
+    ];
   },
 
   /**
