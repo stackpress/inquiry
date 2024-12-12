@@ -15,7 +15,7 @@ export type Field = {
   type: string,
   length?: number | [ number, number ],
   attribute?: string,
-  default?: string|number,
+  default?: string|number|boolean,
   nullable?: boolean,
   unsigned?: boolean,
   autoIncrement?: boolean,
