@@ -89,16 +89,28 @@ const Mysql: Dialect = {
     const addFields = Object.keys(build.fields.add).map(name => {
       const field = build.fields.add[name];
       const column: string[] = [];
+      const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
+      if (Array.isArray(length)) {
+        column.push(`${type}(${length.join(', ')})`);
+      } else if (length) {
+        column.push(`${type}(${length})`);
+      } else {
+        column.push(type);
+      }
       field.attribute && column.push(field.attribute);
       field.unsigned && column.push('UNSIGNED');
       field.nullable && column.push('NOT NULL');
       field.autoIncrement && column.push('AUTO_INCREMENT');
       if (field.default) {
-        if (!isNaN(Number(field.default))) {
+        if (typeof field.default === 'boolean') {
+          column.push(`DEFAULT ${field.default ? 'TRUE' : 'FALSE'}`);
+        } else if (!isNaN(Number(field.default))) {
           column.push(`DEFAULT ${field.default}`);
+        } else if (typeof field.default === 'string' 
+          && field.default.endsWith('()')
+        ) {
+          column.push(`DEFAULT ${field.default.toUpperCase()}`);
         } else {
           column.push(`DEFAULT '${field.default}'`);
         }
@@ -115,11 +127,17 @@ const Mysql: Dialect = {
     // CHANGE COLUMN column1_name data_type(length) [column_constraint]
 
     const changeFields = Object.keys(build.fields.update).map(name => {
-      const field = build.fields.add[name];
+      const field = build.fields.update[name];
       const column: string[] = [];
+      const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
+      if (Array.isArray(length)) {
+        column.push(`${type}(${length.join(', ')})`);
+      } else if (length) {
+        column.push(`${type}(${length})`);
+      } else {
+        column.push(type);
+      }
       field.attribute && column.push(field.attribute);
       field.unsigned && column.push('UNSIGNED');
       field.nullable && column.push('NOT NULL');
@@ -151,8 +169,10 @@ const Mysql: Dialect = {
     //
     // ADD PRIMARY KEY (column1_name, column2_name)
 
-    const addPrimaries = `ADD PRIMARY KEY (${q}${build.primary.remove.join(`${q}, ${q}`)}${q})`;
-
+    const addPrimaries = build.primary.add.length 
+      ? [ `ADD PRIMARY KEY (${q}${build.primary.add.join(`${q}, ${q}`)}${q})` ]
+      : [];
+    
     //----------------------------------------------------------------//
     // Drop unique key
     //
@@ -186,7 +206,7 @@ const Mysql: Dialect = {
     // ADD INDEX column1_name (column1_name, column2_name)
 
     const addKeys = Object.keys(build.keys.add).map(
-      key => `ADD INDEX ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
+      key => `ADD INDEX ${q}${key}${q} (${q}${build.keys.add[key].join(`${q}, ${q}`)}${q})`
     );
 
     //----------------------------------------------------------------//
@@ -211,7 +231,7 @@ const Mysql: Dialect = {
         info.delete ? `ON DELETE ${info.delete}`: '', 
         info.update ? `ON UPDATE ${info.update}`: ''
       ].join(' ');
-    }).join(', ');
+    });
 
     if (!removeFields.length
       && !addFields.length
@@ -243,7 +263,7 @@ const Mysql: Dialect = {
     );
     return [
       { 
-        query: `ALTER TABLE ${build.table} (${query.join(', ')})`, 
+        query: `ALTER TABLE ${q}${build.table}${q} (${query.join(', ')})`, 
         values: [] 
       }
     ];
@@ -282,8 +302,14 @@ const Mysql: Dialect = {
       field.nullable && column.push('NOT NULL');
       field.autoIncrement && column.push('AUTO_INCREMENT');
       if (field.default) {
-        if (!isNaN(Number(field.default))) {
+        if (typeof field.default === 'boolean') {
+          column.push(`DEFAULT ${field.default ? 'TRUE' : 'FALSE'}`);
+        } else if (!isNaN(Number(field.default))) {
           column.push(`DEFAULT ${field.default}`);
+        } else if (typeof field.default === 'string' 
+          && field.default.endsWith('()')
+        ) {
+          column.push(`DEFAULT ${field.default.toUpperCase()}`);
         } else {
           column.push(`DEFAULT '${field.default}'`);
         }
@@ -349,7 +375,7 @@ const Mysql: Dialect = {
 
     return [
       { 
-        query: `CREATE TABLE IF NOT EXISTS ${build.table} (${query.join(' ')})`, 
+        query: `CREATE TABLE IF NOT EXISTS ${q}${build.table}${q} (${query.join(' ')})`, 
         values: [] 
       }
     ];
@@ -437,8 +463,8 @@ const Mysql: Dialect = {
         const type = relation.type as Join;
         const table = relation.table !== relation.as 
           ? `${q}${relation.table}${q} AS ${q}${relation.as}${q}`
-          : `${q}relation.table${q}`;
-        return `${joins[type]} ${table} ON (${q}${relation.from}${q} = ${q}${relation.to}${q})`;
+          : `${q}${relation.table}${q}`;
+        return `${joins[type]} JOIN ${table} ON (${q}${relation.from}${q} = ${q}${relation.to}${q})`;
       });
       query.push(relations.join(' '));
     }
@@ -452,8 +478,8 @@ const Mysql: Dialect = {
     }
 
     if (build.sort.length) {
-      const sort = build.sort.map((sort) => `${sort[0]} ${sort[1]}`);
-      query.push(`ORDER BY ${q}${sort.join(`${q}, ${q}`)}${q}`);
+      const sort = build.sort.map((sort) => `${q}${sort[0]}${q} ${sort[1].toUpperCase()}`);
+      query.push(`ORDER BY ${sort.join(`, `)}`);
     }
 
     if (build.limit) {

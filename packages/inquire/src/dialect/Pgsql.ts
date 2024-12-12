@@ -6,7 +6,7 @@ import type Insert from '../builder/Insert';
 import type Select from '../builder/Select';
 import type Update from '../builder/Update';
 //common
-import type { Join, Value, FlatValue, Dialect } from '../types';
+import type { Join, Value, FlatValue, Dialect, QueryObject } from '../types';
 import Exception from '../Exception';
 import { joins } from '../helpers';
 
@@ -26,9 +26,9 @@ export const typemap: Record<string, string> = {
   number: 'INTEGER',
   int: 'INTEGER',
   integer: 'INTEGER',
-  float: 'FLOAT',
+  float: 'DECIMAL',
   date: 'DATE',
-  datetime: 'DATETIME',
+  datetime: 'TIMESTAMP',
   time: 'TIME'
 };
 
@@ -59,6 +59,32 @@ export function getType(key: string, length?: number | [ number, number ]) {
   return { type, length };
 };
 
+export function getDefault(value: any, type: string) {
+  if (typeof value === 'boolean') {
+    return value ? 'TRUE' : 'FALSE';
+  } else if (typeof value === 'number' || !isNaN(Number(value))) {
+    return value;
+  } else if (typeof value === 'string') {
+    if (/^[A-Z_]+$/g.test(value)) {
+      return value;
+    } else if (value.endsWith('()')) {
+      if (value.toLowerCase() === 'now()') {
+        if (type === 'TIMESTAMP') {
+          return 'CURRENT_TIMESTAMP';
+        } else if (type === 'DATE') {
+          return 'CURRENT_DATE';
+        } else if (type === 'TIME') {
+          return 'CURRENT_TIME';
+        }
+      }
+      return value.toUpperCase();
+    }
+  } else if (value && typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return `'${value}'`;
+};
+
 const Pgsql: Dialect = {
   /**
    * Converts alter builder to query and values
@@ -73,7 +99,7 @@ const Pgsql: Dialect = {
     // DROP COLUMN `name`
 
     const removeFields = build.fields.remove.map(
-      name => `DROP ${q}${name}${q}`
+      name => `DROP COLUMN ${q}${name}${q}`
     );
 
     //----------------------------------------------------------------//
@@ -84,19 +110,23 @@ const Pgsql: Dialect = {
     const addFields = Object.keys(build.fields.add).map(name => {
       const field = build.fields.add[name];
       const column: string[] = [];
+      const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
+      if (field.autoIncrement) {
+        column.push('SERIAL');
+      } else if (type === 'FLOAT' || type === 'INTEGER') {
+        column.push(type);
+      } else if (Array.isArray(length)) {
+        column.push(`${type}(${length.join(', ')})`);
+      } else if (length) {
+        column.push(`${type}(${length})`);
+      } else {
+        column.push(type);
+      }
       field.attribute && column.push(field.attribute);
-      field.unsigned && column.push('UNSIGNED');
-      field.nullable && column.push('NOT NULL');
-      field.autoIncrement && column.push('AUTO_INCREMENT');
+      !field.nullable && column.push('NOT NULL');
       if (field.default) {
-        if (!isNaN(Number(field.default))) {
-          column.push(`DEFAULT ${field.default}`);
-        } else {
-          column.push(`DEFAULT '${field.default}'`);
-        }
+        column.push(`DEFAULT ${getDefault(field.default, type)}`);
       } else if (field.nullable) {
         column.push('DEFAULT NULL');
       }
@@ -107,38 +137,42 @@ const Pgsql: Dialect = {
     //----------------------------------------------------------------//
     // Change field
     //
-    // CHANGE COLUMN `name` `type` (`length`) `attribute` `unsigned` `nullable` `autoIncrement` `default`
+    // ALTER COLUMN `name` `type` (`length`) `attribute` `unsigned` `nullable` `autoIncrement` `default`
 
     const changeFields = Object.keys(build.fields.update).map(name => {
-      const field = build.fields.add[name];
-      const column: string[] = [];
-      column.push(`${q}${name}${q}`);
-      field.type && column.push(field.type);
-      field.length && column.push(`(${field.length})`);
-      field.attribute && column.push(field.attribute);
-      field.unsigned && column.push('UNSIGNED');
-      field.nullable && column.push('NOT NULL');
-      field.autoIncrement && column.push('AUTO_INCREMENT');
+      const field = build.fields.update[name];
+      const transactions: string[] = [];
+      const { type, length } = getType(field.type, field.length);
+      if (field.autoIncrement) {
+        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE SERIAL`);
+      } else if (type === 'FLOAT' || type === 'INTEGER') {
+        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}`);
+      } else if (Array.isArray(length)) {
+        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}(${length.join(', ')})`);
+      } else if (length) {
+        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}(${length})`);
+      } else {
+        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}`);
+      }
+      if (typeof field.nullable === 'boolean' && !field.nullable) {
+        transactions.push(`ALTER COLUMN ${q}${name}${q} SET NOT NULL`);
+      }
       if (field.default) {
-        if (!isNaN(Number(field.default))) {
-          column.push(`DEFAULT ${field.default}`);
-        } else {
-          column.push(`DEFAULT '${field.default}'`);
-        }
+        transactions.push(`ALTER COLUMN ${q}${name}${q} SET DEFAULT ${getDefault(field.default, type)}`);
       } else if (field.nullable) {
-        column.push('DEFAULT NULL');
+        transactions.push('ALTER COLUMN ${q}${name}${q} SET DEFAULT NULL');
       }
 
-      return `CHANGE COLUMN ${column.join(' ')}`;
+      return transactions.join(', ');
     });
 
     //----------------------------------------------------------------//
     // Remove primary keys
     //
-    // DROP PRIMARY KEY `name`
+    // DROP CONSTRAINT `name`
 
     const removePrimaries = build.primary.remove.map(
-      name => `DROP PRIMARY KEY ${q}${name}${q}`
+      name => `DROP CONSTRAINT ${q}${name}${q}`
     );
 
     //----------------------------------------------------------------//
@@ -146,7 +180,9 @@ const Pgsql: Dialect = {
     //
     // ADD PRIMARY KEY (`name`, `name`)
 
-    const addPrimaries = `ADD PRIMARY KEY (${q}${build.primary.remove.join(`${q}, ${q}`)}${q})`;
+    const addPrimaries = build.primary.add.length 
+      ? [ `ADD PRIMARY KEY (${q}${build.primary.add.join(`${q}, ${q}`)}${q})` ]
+      : [];
 
     //----------------------------------------------------------------//
     // Drop unique keys
@@ -181,16 +217,16 @@ const Pgsql: Dialect = {
     // ADD INDEX `name` (`name`, `name`)
 
     const addKeys = Object.keys(build.keys.add).map(
-      key => `ADD INDEX ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
+      key => `ADD INDEX ${q}${key}${q} (${q}${build.keys.add[key].join(`${q}, ${q}`)}${q})`
     );
 
     //----------------------------------------------------------------//
     // Drop foreign key
     //
-    // DROP FOREIGN KEY column1_name
+    // DROP CONSTRAINT column1_name
 
     const removeForeignKeys = build.foreign.remove.map(
-      name => `DROP FOREIGN KEY ${q}${name}${q}`
+      name => `DROP CONSTRAINT ${q}${name}${q}`
     );
 
     //----------------------------------------------------------------//
@@ -206,7 +242,7 @@ const Pgsql: Dialect = {
         info.delete ? `ON DELETE ${info.delete}`: '', 
         info.update ? `ON UPDATE ${info.update}`: ''
       ].join(' ');
-    }).join(', ');
+    });
 
     if (!removeFields.length
       && !addFields.length
@@ -238,7 +274,7 @@ const Pgsql: Dialect = {
     );
     return [
       { 
-        query: `ALTER TABLE ${build.table} ${query.join(', ')}`, 
+        query: `ALTER TABLE ${q}${build.table}${q} ${query.join(', ')}`, 
         values: [] 
       }
     ];
@@ -266,7 +302,11 @@ const Pgsql: Dialect = {
       const column: string[] = [];
       const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      if (Array.isArray(length)) {
+      if (field.autoIncrement) {
+        column.push('SERIAL');
+      } else if (type === 'FLOAT' || type === 'INTEGER') {
+        column.push(type);
+      } else if (Array.isArray(length)) {
         column.push(`${type}(${length.join(', ')})`);
       } else if (length) {
         column.push(`${type}(${length})`);
@@ -274,15 +314,9 @@ const Pgsql: Dialect = {
         column.push(type);
       }
       field.attribute && column.push(field.attribute);
-      field.unsigned && column.push('UNSIGNED');
-      field.nullable && column.push('NOT NULL');
-      field.autoIncrement && column.push('AUTO_INCREMENT');
+      !field.nullable && column.push('NOT NULL');
       if (field.default) {
-        if (!isNaN(Number(field.default))) {
-          column.push(`DEFAULT ${field.default}`);
-        } else {
-          column.push(`DEFAULT '${field.default}'`);
-        }
+        column.push(`DEFAULT ${getDefault(field.default, type)}`);
       } else if (field.nullable) {
         column.push('DEFAULT NULL');
       }
@@ -307,22 +341,11 @@ const Pgsql: Dialect = {
     //----------------------------------------------------------------//
     // Add unique keys
     //
-    // UNIQUE KEY name (column1_name, column2_name)
+    // UNIQUE name (column1_name, column2_name)
 
-    if (build.unique.length) {
+    if (Object.keys(build.unique).length) {
       query.push(Object.keys(build.unique).map(
-        key => `, UNIQUE KEY ${q}${key}${q} (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
-      ).join(', '));
-    }
-
-    //----------------------------------------------------------------//
-    // Add keys
-    //
-    // KEY name (column1_name, column2_name)
-
-    if (build.keys.length) {
-      query.push(Object.keys(build.keys).map(
-        key => `, KEY ${q}${key}${q} (${q}${build.keys[key].join(`${q}, ${q}`)}${q})`
+        key => `, UNIQUE (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
       ).join(', '));
     }
 
@@ -344,12 +367,28 @@ const Pgsql: Dialect = {
       }).join(', '));
     }
 
-    return [
+    const transactions: QueryObject[] = [
       { 
-        query: `CREATE TABLE IF NOT EXISTS ${build.table} (${query.join(' ')})`, 
+        query: `CREATE TABLE IF NOT EXISTS ${q}${build.table}${q} (${query.join(' ')})`, 
         values: [] 
       }
     ];
+
+    //----------------------------------------------------------------//
+    // Add keys
+    //
+    // CREATE INDEX "price" ON products ("name")
+
+    if (Object.keys(build.keys).length) {
+      Object.keys(build.keys).forEach(key => {
+        transactions.push({
+          query: `CREATE INDEX ${q}${key}${q} ON ${q}${build.table}${q}(${q}${build.keys[key].join(`${q}, ${q}`)}${q})`,
+          values: []
+        });
+      });
+    }
+
+    return transactions;
   },
 
   /**
@@ -437,8 +476,8 @@ const Pgsql: Dialect = {
         const type = relation.type as Join;
         const table = relation.table !== relation.as 
           ? `${q}${relation.table}${q} AS ${q}${relation.as}${q}`
-          : `${q}relation.table${q}`;
-        return `${joins[type]} ${table} ON (${q}${relation.from}${q} = ${q}${relation.to}${q})`;
+          : `${q}${relation.table}${q}`;
+        return `${joins[type]} JOIN ${table} ON (${q}${relation.from}${q} = ${q}${relation.to}${q})`;
       });
       query.push(relations.join(' '));
     }
@@ -452,8 +491,8 @@ const Pgsql: Dialect = {
     }
 
     if (build.sort.length) {
-      const sort = build.sort.map((sort) => `${sort[0]} ${sort[1]}`);
-      query.push(`ORDER BY ${q}${sort.join(`${q}, ${q}`)}${q}`);
+      const sort = build.sort.map((sort) => `${q}${sort[0]}${q} ${sort[1].toUpperCase()}`);
+      query.push(`ORDER BY ${sort.join(`, `)}`);
     }
 
     if (build.limit) {

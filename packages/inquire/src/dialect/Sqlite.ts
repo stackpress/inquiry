@@ -86,7 +86,7 @@ const Sqlite: Dialect = {
 
     build.fields.remove.forEach(name => {
       transactions.push({
-        query: `ALTER TABLE ${build.table} DROP COLUMN ${q}${name}${q}`,
+        query: `ALTER TABLE ${q}${build.table}${q} DROP COLUMN ${q}${name}${q}`,
         values: []
       });
     });
@@ -101,7 +101,9 @@ const Sqlite: Dialect = {
       const column: string[] = [];
       const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      if (Array.isArray(length)) {
+      if (type === 'REAL' || type === 'INTEGER') {
+        column.push(type);
+      } else if (Array.isArray(length)) {
         column.push(`${type}(${length.join(', ')})`);
       } else if (length) {
         column.push(`${type}(${length})`);
@@ -112,8 +114,18 @@ const Sqlite: Dialect = {
       field.nullable && column.push('NOT NULL');
       field.autoIncrement && column.push('AUTOINCREMENT');
       if (field.default) {
-        if (!isNaN(Number(field.default))) {
+        if (typeof field.default === 'boolean') {
+          column.push(`DEFAULT ${field.default ? '1' : '0'}`);
+        } else if (!isNaN(Number(field.default))) {
           column.push(`DEFAULT ${field.default}`);
+        } else if (typeof field.default === 'string' 
+          && field.default.toUpperCase() === 'NOW()'
+        ) {
+          column.push('DEFAULT CURRENT_TIMESTAMP');
+        } else if (typeof field.default === 'string' 
+          && field.default.endsWith('()')
+        ) {
+          column.push(`DEFAULT ${field.default.toUpperCase()}`);
         } else {
           column.push(`DEFAULT '${field.default}'`);
         }
@@ -122,7 +134,7 @@ const Sqlite: Dialect = {
       }
 
       transactions.push({
-        query: `ALTER TABLE ${build.table} ADD COLUMN ${column.join(' ')}`,
+        query: `ALTER TABLE ${q}${build.table}${q} ADD COLUMN ${column.join(' ')}`,
         values: []
       });
     });
@@ -135,7 +147,9 @@ const Sqlite: Dialect = {
     Object.keys(build.fields.update).map(name => {
       const field = build.fields.update[name];
       let { type, length } = getType(field.type, field.length);
-      if (Array.isArray(length)) {
+      
+      if (type === 'REAL' || type === 'INTEGER') {
+      } else if (Array.isArray(length)) {
         type = `${type}(${length.join(', ')})`;
       } else if (length) {
         type = `${type}(${length})`;
@@ -166,7 +180,7 @@ const Sqlite: Dialect = {
 
     Object.entries(build.unique.add).forEach(([name, values]) => {
       transactions.push({ 
-        query: `CREATE UNIQUE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        query: `CREATE UNIQUE INDEX ${q}${name}${q} ON ${q}${build.table}${q}(${q}${values.join(`${q}, ${q}`)}${q})`, 
         values: [] 
       });
     });
@@ -190,7 +204,7 @@ const Sqlite: Dialect = {
 
     Object.entries(build.keys.add).forEach(([name, values]) => {
       transactions.push({ 
-        query: `CREATE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        query: `CREATE INDEX ${q}${name}${q} ON ${q}${build.table}${q}(${q}${values.join(`${q}, ${q}`)}${q})`, 
         values: [] 
       });
     });
@@ -223,7 +237,9 @@ const Sqlite: Dialect = {
       const column: string[] = [];
       const { type, length } = getType(field.type, field.length);
       column.push(`${q}${name}${q}`);
-      if (Array.isArray(length)) {
+      if (type === 'REAL' || type === 'INTEGER') {
+        column.push(type);
+      } else if (Array.isArray(length)) {
         column.push(`${type}(${length.join(', ')})`);
       } else if (length) {
         column.push(`${type}(${length})`);
@@ -234,8 +250,18 @@ const Sqlite: Dialect = {
       field.nullable && column.push('NOT NULL');
       field.autoIncrement && column.push('AUTOINCREMENT');
       if (field.default) {
-        if (!isNaN(Number(field.default))) {
+        if (typeof field.default === 'boolean') {
+          column.push(`DEFAULT ${field.default ? '1' : '0'}`);
+        } else if (!isNaN(Number(field.default))) {
           column.push(`DEFAULT ${field.default}`);
+        } else if (typeof field.default === 'string' 
+          && field.default.toUpperCase() === 'NOW()'
+        ) {
+          column.push('DEFAULT CURRENT_TIMESTAMP');
+        } else if (typeof field.default === 'string' 
+          && field.default.endsWith('()')
+        ) {
+          column.push(`DEFAULT ${field.default.toUpperCase()}`);
         } else {
           column.push(`DEFAULT '${field.default}'`);
         }
@@ -279,7 +305,7 @@ const Sqlite: Dialect = {
 
     Object.entries(build.unique).forEach(([name, values]) => {
       transactions.push({ 
-        query: `CREATE UNIQUE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        query: `CREATE UNIQUE INDEX ${q}${name}${q} ON ${q}${build.table}${q}(${q}${values.join(`${q}, ${q}`)}${q})`, 
         values: [] 
       });
     });
@@ -291,7 +317,7 @@ const Sqlite: Dialect = {
 
     Object.entries(build.keys).forEach(([name, values]) => {
       transactions.push({ 
-        query: `CREATE INDEX ${q}${name}${q} ON ${build.table}(${q}${values.join(`${q}, ${q}`)}${q})`, 
+        query: `CREATE INDEX ${q}${name}${q} ON ${q}${build.table}${q}(${q}${values.join(`${q}, ${q}`)}${q})`, 
         values: [] 
       });
     });
@@ -381,8 +407,8 @@ const Sqlite: Dialect = {
         const type = relation.type as Join;
         const table = relation.table !== relation.as 
           ? `${q}${relation.table}${q} AS ${q}${relation.as}${q}`
-          : `${q}relation.table${q}`;
-        return `${joins[type]} ${table} ON (${q}${relation.from}${q} = ${q}${relation.to}${q})`;
+          : `${q}${relation.table}${q}`;
+        return `${joins[type]} JOIN ${table} ON (${q}${relation.from}${q} = ${q}${relation.to}${q})`;
       });
       query.push(relations.join(' '));
     }
@@ -396,8 +422,8 @@ const Sqlite: Dialect = {
     }
 
     if (build.sort.length) {
-      const sort = build.sort.map((sort) => `${sort[0]} ${sort[1]}`);
-      query.push(`ORDER BY ${q}${sort.join(`${q}, ${q}`)}${q}`);
+      const sort = build.sort.map((sort) => `${q}${sort[0]}${q} ${sort[1].toUpperCase()}`);
+      query.push(`ORDER BY ${sort.join(`, `)}`);
     }
 
     if (build.limit) {

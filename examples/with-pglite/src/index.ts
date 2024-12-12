@@ -8,37 +8,45 @@ async function main() {
   const engine = connect(resource);
 
   const create = engine.create('profile')
-    .addField('id', { type: 'VARCHAR', length: 255 })
-    .addField('name', { type: 'VARCHAR', length: 255 })
-    .addPrimaryKey('id');
+    .addField('id', { type: 'int', autoIncrement: true })
+    .addField('name', { type: 'string', length: 255 })
+    .addField('price', { type: 'float', length: [ 10, 2 ], unsigned: true })
+    .addField('created', { type: 'date', default: 'CURRENT_DATE' })
+    .addPrimaryKey('id')
+    .addUniqueKey('name', 'name');
   console.log(create.query());
-  console.log(await create);
-
-  const insert = engine
-    .insert('profile')
-    .values({ id: '1', name: 'John Doe' });
+  console.log('--', await create);
+  
+  const alter = engine.alter('profile')
+    .addField('age', { type: 'int', unsigned: true })
+    .removeField('price')
+    .changeField('created', { type: 'datetime', default: 'now()' });
+  console.log(alter.query());
+  console.log('--', await alter);
+  
+  const insert = engine.insert('profile').values([
+    { name: 'John Doe', age: 30 },
+    { name: 'Jane Doe', age: 25 }
+  ]);
   console.log(insert.query());
-  console.log(JSON.stringify(await insert, null, 2));
+  console.log('--', await insert);
 
   const select = engine.select('*').from('profile');
   console.log(select.query());
-  console.log(JSON.stringify(await select, null, 2));
-
-  const update = engine
-    .update('profile')
-    .set({ name: 'Jane Doe' })
-    .where('id = ?', [ '1' ]);
-  console.log(update.query());
-  console.log(JSON.stringify(await update, null, 2));
-  console.log(JSON.stringify(await select, null, 2));
-
-  const remove = engine
-    .delete('profile')
-    .where('id = ?', [ '1' ]);
-  console.log(remove.query());
-  console.log(JSON.stringify(await remove, null, 2));
-  console.log(JSON.stringify(await select, null, 2));
+  console.log('--', await select);
   
+  const update = engine.update('profile')
+    .set({ age: 31 })
+    .where('name = ?', [ 'Jane Doe' ]);
+  console.log(update.query());
+  console.log('--', await update);
+  console.log('--', await select);
+
+  const remove = engine.delete('profile')
+    .where('name = ?', [ 'John Doe' ]);
+  console.log(remove.query());
+  console.log('--', await remove);
+  console.log('--', await select);
 }
 
 main().catch(console.error);
