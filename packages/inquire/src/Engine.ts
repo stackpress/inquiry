@@ -45,6 +45,14 @@ export default class Engine {
   }
 
   /**
+   * Drops a table
+   */
+  public drop(table: string) {
+    const query = this.dialect.drop(table);
+    return this.query([ query ]);
+  }
+
+  /**
    * Inser table query builder
    */
   public insert<R = unknown>(table: string) {
@@ -62,10 +70,26 @@ export default class Engine {
   }
 
   /**
+   * Renames a table
+   */
+  public rename(from: string, to: string) {
+    const query = this.dialect.rename(from, to);
+    return this.query([ query ]);
+  }
+
+  /**
    * Select table query builder
    */
   public select<R = unknown>(columns?: string|string[]) {
     return new Select<R>(columns, this);
+  }
+
+  /**
+   * Truncate table
+   */
+  public truncate(table: string, cascade = false) {
+    const query = this.dialect.truncate(table, cascade);
+    return this.query([ query ]);
   }
 
   /**
