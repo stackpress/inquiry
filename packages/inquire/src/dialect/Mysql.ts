@@ -404,6 +404,13 @@ const Mysql: Dialect = {
   },
 
   /**
+   * Drops a table
+   */
+  drop(table: string) {
+    return { query: `DROP TABLE ${q}${table}${q}`, values: [] };
+  },
+
+  /**
    * Converts insert builder to query and values
    */
   insert(builder: Insert) {
@@ -428,6 +435,16 @@ const Mysql: Dialect = {
 
     query.push(`VALUES ${row.join(', ')}`);
     return { query: query.join(' '), values };
+  },
+
+  /**
+   * Renames a table
+   */
+  rename(from: string, to: string) {
+    return { 
+      query: `RENAME TABLE ${q}${from}${q} TO ${q}${to}${q}`, 
+      values: [] 
+    };
   },
 
   /**
@@ -491,6 +508,16 @@ const Mysql: Dialect = {
     }
 
     return { query: query.join(' '), values };
+  },
+
+  /**
+   * Truncate table
+   */
+  truncate(table: string, cascade = false) {
+    return { 
+      query: `TRUNCATE TABLE ${q}${table}${q}${cascade && ' CASCADE'}`, 
+      values: [] 
+    };
   },
 
   /**
