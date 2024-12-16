@@ -150,7 +150,7 @@ export default class Select<R = unknown> {
     if (!this._engine) {
       throw Exception.for('No engine provided');
     }
-    return this._engine.query<R>([ this.query() ]).then(resolve);
+    return this._engine.query<R>(this.query()).then(resolve);
   }
 
   /**

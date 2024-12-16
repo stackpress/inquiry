@@ -6,7 +6,12 @@ import Insert from './builder/Insert';
 import Select from './builder/Select';
 import Update from './builder/Update';
 //local
-import type { Connection, QueryObject } from './types';
+import type { 
+  Value, 
+  Connection, 
+  QueryObject, 
+  Transaction 
+} from './types';
 
 export default class Engine {
   //database connection
@@ -48,8 +53,8 @@ export default class Engine {
    * Drops a table
    */
   public drop(table: string) {
-    const query = this.dialect.drop(table);
-    return this.query([ query ]);
+    const { query, values } = this.dialect.drop(table);
+    return this.query(query, values);
   }
 
   /**
@@ -65,16 +70,21 @@ export default class Engine {
    * native database engine connection. Any code that uses
    * this library should not care about the kind of database.
    */
-  public query<R = unknown>(queries: QueryObject[]) {
-    return this.connection.query<R>(queries);
+  public query<R = unknown>(query: QueryObject): Promise<R[]>;
+  public query<R = unknown>(query: string, values?: Value[]): Promise<R[]>;
+  public query<R = unknown>(query: string|QueryObject, values: Value[] = []) {
+    if (typeof query === 'string') {
+      query = { query, values };
+    }
+    return this.connection.query<R>(query);
   }
 
   /**
    * Renames a table
    */
   public rename(from: string, to: string) {
-    const query = this.dialect.rename(from, to);
-    return this.query([ query ]);
+    const { query, values } = this.dialect.rename(from, to);
+    return this.query(query, values);
   }
 
   /**
@@ -85,11 +95,18 @@ export default class Engine {
   }
 
   /**
+   * Common pattern to invoke a transaction
+   */
+  public transaction<R = unknown>(callback: Transaction<R>) {
+    return this.connection.transaction<R>(callback);
+  }
+
+  /**
    * Truncate table
    */
   public truncate(table: string, cascade = false) {
-    const query = this.dialect.truncate(table, cascade);
-    return this.query([ query ]);
+    const { query, values } = this.dialect.truncate(table, cascade);
+    return this.query(query, values);
   }
 
   /**

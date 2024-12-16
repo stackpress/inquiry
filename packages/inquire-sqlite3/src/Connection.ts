@@ -1,22 +1,30 @@
 //modules
-import { Database } from 'better-sqlite3';
+import type { Database } from 'better-sqlite3';
 //stackpress
 import type { 
   Dialect, 
   Connection, 
-  QueryObject
+  QueryObject,
+  Transaction
 } from '@stackpress/inquire/dist/types';
 import Sqlite from '@stackpress/inquire/dist/dialect/Sqlite';
-import Exception from '@stackpress/inquire/dist/Exception';
 //local
 import type { Results } from './types';
 
 export default class BetterSqlite3Connection implements Connection {
   //sql language dialect
   public readonly dialect: Dialect = Sqlite;
-
   //the database connection
   public readonly resource: Database;
+  //last inserted id
+  protected _lastId?: number|string;
+
+  /**
+   * Get the last inserted id
+   */
+  public get lastId() {
+    return this._lastId;
+  }
 
   /**
    * Set the connection
@@ -26,50 +34,10 @@ export default class BetterSqlite3Connection implements Connection {
   }
 
   /**
-   * Query the database. Should return just the expected 
-   * results, because the raw results depends on the 
-   * native database connection. Any code that uses this 
-   * library should not care about the kind of database.
-   */
-  public async query<R = unknown>(queries: QueryObject[]) {
-    const results = await this.raw<R>(queries);
-    return Array.isArray(results) ? results : [];
-  }
-
-  /**
-   * Returns queries and returns the raw results 
-   * dictated by the native database connection.
-   */
-  public async raw<R = unknown>(queries: QueryObject[]) {
-    if (queries.length === 0) {
-      throw Exception.for('No queries to execute.');
-    } 
-
-    const queue = queries.slice();
-    const last = queue.pop() as QueryObject;
-    
-    if (queue.length === 0) {
-      const formatted = this._format(last);
-      return this._query<R>(formatted);
-    }
-
-    const tx = this.resource.transaction(() => {
-      for (const request of queries) {
-        const formatted = this._format(request);
-        this._query<R>(formatted);
-      }
-      const formatted = this._format(last);
-      return this._query<R>(formatted);
-    });
-
-    return tx();
-  }
-
-  /**
    * Formats the query to what the database connection understands
    * Formats the values to what the database connection accepts 
    */
-  protected _format(request: QueryObject) {
+  public format(request: QueryObject) {
     let { query, values = [] } = request;
     for (let i = 0; i < values.length; i++) {
       //check the value for Date and arrays and objects
@@ -83,6 +51,44 @@ export default class BetterSqlite3Connection implements Connection {
       }
     }
     return { query, values };
+  }
+
+  /**
+   * Query the database. Should return just the expected 
+   * results, because the raw results depends on the 
+   * native database connection. Any code that uses this 
+   * library should not care about the kind of database.
+   */
+  public async query<R = unknown>(request: QueryObject) {
+    const results = await this.raw(request);
+    if (!Array.isArray(results) && results.lastInsertRowid) {
+      this._lastId = results.lastInsertRowid;
+    }
+    return Array.isArray(results) ? results as R[] : [];
+  }
+
+  /**
+   * Runs query and returns the raw results 
+   * dictated by the native database connection.
+   */
+  public async raw<R = unknown>(request: QueryObject) {
+    const formatted = this.format(request);
+    return this._query<R>(formatted);
+  }
+
+  /**
+   * Runs multiple queries in a transaction
+   */
+  public async transaction<R = unknown>(callback: Transaction<R>) {
+    try {
+      await this.raw({ query: 'BEGIN TRANSACTION' });
+      const results = await callback(this);
+      await this.raw({ query: 'COMMIT' });
+      return results;
+    } catch (e) {
+      await this.raw({ query: 'ROLLBACK' });
+      throw e;
+    }
   }
 
   /**

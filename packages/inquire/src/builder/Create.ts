@@ -1,5 +1,11 @@
 //common
-import type { Field, Resolve, Dialect, ForeignKey } from '../types';
+import type { 
+  Field, 
+  Resolve, 
+  Dialect, 
+  ForeignKey, 
+  QueryObject 
+} from '../types';
 import Engine from '../Engine';
 import Exception from '../Exception';
 
@@ -140,6 +146,13 @@ export default class Create<R = unknown> {
     if (!this._engine) {
       throw Exception.for('No engine provided');
     }
-    return this._engine.query<R>(this.query()).then(resolve);
+    const queries = this.query();
+    const last = queries.pop() as QueryObject;
+    return this._engine.transaction<R>(async connection => {
+      for (const request of queries) {
+        await connection.query<R>(connection.format(request));
+      }
+      return await connection.query<R>(connection.format(last));
+    }).then(resolve);
   }
 }

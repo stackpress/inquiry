@@ -10,6 +10,11 @@ export default class Insert<R = unknown> {
   protected _engine?: Engine;
   
   /**
+   * Whether to return what was inserted
+   */
+  protected _returning = false;
+  
+  /**
    * The table to delete from.
    */
   protected _table: string;
@@ -47,6 +52,7 @@ export default class Insert<R = unknown> {
   public build() {
     return {
       table: this._table,
+      returning: this._returning,
       values: this._values
     }
   }
@@ -63,6 +69,13 @@ export default class Insert<R = unknown> {
   }
 
   /**
+   * Whether to return what was inserted
+   */
+  public returning(returning = true) {
+    this._returning = returning;
+  }
+
+  /**
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
@@ -70,7 +83,7 @@ export default class Insert<R = unknown> {
     if (!this._engine) {
       throw Exception.for('No engine provided');
     }
-    return this._engine.query<R>([ this.query() ]).then(resolve);
+    return this._engine.query<R>(this.query()).then(resolve);
   }
 
   public values(values: Record<string, Value>|Record<string, Value>[]) {
