@@ -110,9 +110,17 @@ export type Dialect = {
 
 export type QueryObject = { query: string, values?: Value[] };
 
+export type Transaction<R = unknown> = (tx: Connection) => Promise<R[]>;
+
 export interface Connection {
   //sql language dialect
   dialect: Dialect;
+
+  /**
+   * Formats the query to what the database connection understands
+   * Formats the values to what the database connection accepts 
+   */
+  format(request: QueryObject): QueryObject;
 
   /**
    * Query the database. Should return just the expected 
@@ -120,5 +128,10 @@ export interface Connection {
    * native database engine connection. Any code that uses
    * this library should not care about the kind of database.
    */
-  query<R = unknown>(queries: QueryObject[]): Promise<R[]>;
+  query<R = unknown>(request: QueryObject): Promise<R[]>;
+
+  /**
+   * Common pattern to invoke a transaction
+   */
+  transaction<R = unknown>(callback: Transaction<R>): Promise<R[]>;
 };

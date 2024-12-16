@@ -24,7 +24,7 @@ async function main(usePool = true) {
   const engine = connect(connection);
 
   const create = engine.create('profile')
-    .addField('id', { type: 'VARCHAR', length: 255 })
+    .addField('id', { type: 'INTEGER' })
     .addField('name', { type: 'VARCHAR', length: 255 })
     .addPrimaryKey('id');
   console.log(create.query());
