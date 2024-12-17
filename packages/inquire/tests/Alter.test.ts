@@ -126,7 +126,7 @@ describe('Alter Builder Tests', () => {
     });
   });
 
-
+  // Line 198 - 201
   it('Should throw an exception when no engine is provided', () => {
     const alter = new Alter('table', undefined as unknown as Engine);
     expect(() => alter.then((res) => res)).to.throw(Exception, 'No engine provided');

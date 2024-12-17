@@ -36,13 +36,12 @@ describe('Delete Builder Tests', () => {
   // Line 58 - 73
   it('Should return a promise when query method is called with a valid engine', () => {
     const mockDialect = {
-      delete: () => 'mock query' // Ensure this matches the actual implementation
+      delete: () => 'mock query' 
     };
     const mockEngine = {
       query: () => Promise.resolve(['result']),
       dialect: mockDialect
     } as unknown as Engine;
-  
     const del = new Delete('table', mockEngine);
     const result = del.then((res) => res);
     expect(result).to.be.a('promise');
@@ -51,7 +50,6 @@ describe('Delete Builder Tests', () => {
     });
   });
   
-
   // Line 58 - 73
   it('Should throw an exception when no engine is provided', () => {
     const del = new Delete('table', undefined as unknown as Engine);
