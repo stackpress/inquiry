@@ -129,4 +129,4 @@ dist
 .yarn/install-state.gz
 .pnp.*
 examples/*/build
-packages/*/tests/fixtures/database
+packages/*/tests/database

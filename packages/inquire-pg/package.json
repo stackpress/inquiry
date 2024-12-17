@@ -1,6 +1,6 @@
 {
   "name": "@stackpress/inquire-pg",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "Apache-2.0",
   "description": "Generic typed pg",
   "author": "Chris <chris@incept.asia>",
@@ -19,7 +19,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@stackpress/inquire": "0.2.1"
+    "@stackpress/inquire": "0.2.2"
   },
   "peerDependencies": {
     "pg": "^8.13.1"
