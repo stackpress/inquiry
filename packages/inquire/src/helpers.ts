@@ -8,3 +8,10 @@ export const joins = {
   full_outer: 'FULL OUTER',
   cross: 'CROSS'
 };
+
+/**
+ * Returns true if the two objects are the same
+ */
+export function jsonCompare(from: any, to: any) {
+  return JSON.stringify(from) === JSON.stringify(to);
+}
