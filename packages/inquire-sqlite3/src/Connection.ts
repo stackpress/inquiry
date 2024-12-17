@@ -97,7 +97,12 @@ export default class BetterSqlite3Connection implements Connection {
   protected _query<R = unknown>(request: QueryObject) {
     const { query, values = [] } = request;
     const stmt = this.resource.prepare(query);
-    if (query.toUpperCase().startsWith('SELECT')) {
+    const QUERY = query.toUpperCase();
+    if (QUERY.startsWith('SELECT')
+      || (QUERY.startsWith('INSERT')
+        && QUERY.includes('RETURNING')
+      )
+    ) {
       return stmt.all(...values) as R[];
     }
     return stmt.run(...values) as Results;

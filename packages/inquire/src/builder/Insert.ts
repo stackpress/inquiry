@@ -12,7 +12,7 @@ export default class Insert<R = unknown> {
   /**
    * Whether to return what was inserted
    */
-  protected _returning = false;
+  protected _returning: string[] = [];
   
   /**
    * The table to delete from.
@@ -71,8 +71,13 @@ export default class Insert<R = unknown> {
   /**
    * Whether to return what was inserted
    */
-  public returning(returning = true) {
-    this._returning = returning;
+  public returning(columns: string|string[] = '*') {
+    if (Array.isArray(columns)) {
+      this._returning = columns;
+    } else {
+      this._returning = [ columns ];
+    }
+    return this;
   }
 
   /**

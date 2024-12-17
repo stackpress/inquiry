@@ -20,7 +20,7 @@ async function main() {
   const insert = engine.insert('profile').values([
     { name: 'John Doe', age: 30 },
     { name: 'Jane Doe', age: 25 }
-  ]);
+  ]).returning('*');
   console.log(insert.query());
   console.log('--', await insert);
 

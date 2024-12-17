@@ -439,13 +439,18 @@ const Pgsql: Dialect = {
     const keys = Object.keys(build.values[0]);
     query.push(`(${q}${keys.join(`${q}, ${q}`)}${q})`);
 
-    const row = build.values.map((value) => {
+    const rows = build.values.map((value) => {
       const row = keys.map(key => value[key]);
       values.push(...row);
       return `(${row.map(() => '?').join(', ')})`;
     });
 
-    query.push(`VALUES ${row.join(', ')}`);
+    query.push(`VALUES ${rows.join(', ')}`);
+    if (build.returning.length) {
+      query.push(`RETURNING ${build.returning.map(
+        column => column !== '*' ? `${q}${column}${q}` : column
+      ).join(', ')}`);
+    }
     return { query: query.join(' '), values };
   },
 
