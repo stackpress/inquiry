@@ -71,7 +71,7 @@ export default class Select<R = unknown> {
     if (Array.isArray(select)) {
       this._columns = select;
     } else {
-      this._columns = [select];
+      this._columns = [ select ];
     }
     this._engine = engine;
   }

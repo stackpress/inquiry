@@ -378,6 +378,11 @@ const Sqlite: Dialect = {
     });
 
     query.push(`VALUES ${row.join(', ')}`);
+    if (build.returning.length) {
+      query.push(`RETURNING ${build.returning.map(
+        column => column !== '*' ? `${q}${column}${q}` : column
+      ).join(', ')}`);
+    }
     return { query: query.join(' '), values };
   },
 
