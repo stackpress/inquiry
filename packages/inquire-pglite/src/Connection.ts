@@ -1,10 +1,11 @@
 //modules
-import type { PGlite, Transaction } from '@electric-sql/pglite';
+import type { PGlite, Transaction as TX } from '@electric-sql/pglite';
 //stackpress
 import type { 
   Dialect, 
   Connection, 
-  QueryObject
+  QueryObject,
+  Transaction
 } from '@stackpress/inquire/dist/types';
 import Pgsql from '@stackpress/inquire/dist/dialect/Pgsql';
 import Exception from '@stackpress/inquire/dist/Exception';
@@ -26,47 +27,10 @@ export default class PGLiteConnection implements Connection {
   }
 
   /**
-   * Query the database. Should return just the expected 
-   * results, because the raw results depends on the 
-   * native database connection. Any code that uses this 
-   * library should not care about the kind of database.
-   */
-  public async query<R = unknown>(queries: QueryObject[]) {
-    const results = await this.raw<R>(queries);
-    return results.rows;
-  }
-
-  /**
-   * Returns queries and returns the raw results 
-   * dictated by the native database connection.
-   */
-  public async raw<R = unknown>(queries: QueryObject[]) {
-    if (queries.length === 0) {
-      throw Exception.for('No queries to execute.');
-    } 
-
-    const queue = queries.slice();
-    const last = queue.pop() as QueryObject;
-    
-    if (queue.length === 0) {
-      const formatted = this._format(last);
-      return await this._query<R>(formatted, this.resource);
-    }
-    return await this.resource.transaction(async tx => {
-      for (const request of queries) {
-        const formatted = this._format(request);
-        await this._query<R>(formatted, tx);
-      }
-      const formatted = this._format(last);
-      return await this._query<R>(formatted, tx);
-    }) as Results<R>;
-  }
-
-  /**
    * Formats the query to what the database connection understands
    * Formats the values to what the database connection accepts 
    */
-  protected _format(request: QueryObject) {
+  public format(request: QueryObject) {
     let { query, values = [] } = request;
     for (let i = 0; i < values.length; i++) {
       if (!query.includes('?')) {
@@ -95,11 +59,46 @@ export default class PGLiteConnection implements Connection {
   }
 
   /**
+   * Query the database. Should return just the expected 
+   * results, because the raw results depends on the 
+   * native database connection. Any code that uses this 
+   * library should not care about the kind of database.
+   */
+  public async query<R = unknown>(request: QueryObject) {
+    const results = await this.raw<R>(request);
+    return results.rows;
+  }
+
+  /**
+   * Returns queries and returns the raw results 
+   * dictated by the native database connection.
+   */
+  public async raw<R = unknown>(request: QueryObject) {
+    const formatted = this.format(request);
+    return this._query<R>(formatted, this.resource);
+  }
+
+  /**
+   * Runs multiple queries in a transaction
+   */
+  public async transaction<R = unknown>(callback: Transaction<R>) {
+    try {
+      await this.raw({ query: 'BEGIN' });
+      const results = await callback(this);
+      await this.raw({ query: 'COMMIT' });
+      return results;
+    } catch (e) {
+      await this.raw({ query: 'ROLLBACK' });
+      throw e;
+    }
+  }
+
+  /**
    * Call the database. If no values are provided, use exec
    */
   protected async _query<R = unknown>(
     request: QueryObject, 
-    resource: PGlite|Transaction
+    resource: PGlite|TX
   ) {
     const { query, values = [] } = request;
     return values.length === 0

@@ -17,17 +17,10 @@ async function main() {
   console.log(create.query());
   console.log('--', await create);
   
-  const alter = engine.alter('profile')
-    .addField('age', { type: 'int', unsigned: true })
-    .removeField('price')
-    .changeField('created', { type: 'datetime', default: 'now()' });
-  console.log(alter.query());
-  console.log('--', await alter);
-  
   const insert = engine.insert('profile').values([
     { name: 'John Doe', age: 30 },
     { name: 'Jane Doe', age: 25 }
-  ]);
+  ]).returning('*');
   console.log(insert.query());
   console.log('--', await insert);
 
@@ -43,7 +36,7 @@ async function main() {
   console.log('--', await select);
 
   const remove = engine.delete('profile')
-    .where('name = ?', [ 'John Doe' ]);
+    .where('name ILIKE ?', [ '%Doe%' ]);
   console.log(remove.query());
   console.log('--', await remove);
   console.log('--', await select);

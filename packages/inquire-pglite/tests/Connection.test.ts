@@ -12,7 +12,7 @@ import Connection from '../src/Connection';
 describe('PGConnection Tests', () => {
   it('Should connect', async () => {
     //this is the raw resource
-    const resource = new PGlite(path.join(__dirname, 'fixtures/database'));
+    const resource = new PGlite(path.join(__dirname, 'database'));
     //this is the connection
     const connection = new Connection(resource);
     //this is the engine
