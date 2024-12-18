@@ -70,7 +70,7 @@ describe('Insert Builder Tests', () => {
     expect(insert.build().returning).to.deep.equal(columnsArray);
   });
 
-  
+
   // Line 78 - 80
   it('Should set _returning to an array with a single "*" when no argument is provided', () => {
     const insert = new Insert('table');
