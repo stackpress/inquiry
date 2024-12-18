@@ -7,7 +7,7 @@ import Delete from '../src/builder/Delete';
 import Insert from '../src/builder/Insert';
 import Select from '../src/builder/Select';
 import Update from '../src/builder/Update';
-import Mysql from '../src/dialect/Mysql';
+import Mysql, { getType } from '../src/dialect/Mysql';
 
 describe('Mysql Dialect Tests', () => {
   it('Should translate alter', async () => {
@@ -233,4 +233,112 @@ describe('Mysql Dialect Tests', () => {
     expect(query.values?.[0]).to.equal('foobar');
     expect(query.values?.[1]).to.equal(1);
   });
+
+
+
+  // Line 58
+  it('Should set type to "TINYINT" when length is exactly 1', () => {
+    const { type, length } = getType('int', 1);
+    expect(type).to.equal('TINYINT');
+    expect(length).to.equal(1);
+  });
+
+  // Line 60
+  it('Should set type to BIGINT when length is greater than 11', () => {
+    const { type } = getType('int', 12);
+    expect(type).to.equal('BIGINT');
+  });
+
+
+  // Line 118
+  it('Should verify that "DEFAULT NULL" is correctly added to the column array when nullable is true', async () => {
+  const alter = new Alter('table');
+  alter.addField('nullableField', { 
+  type: 'string',
+  length: 255,
+  nullable: true
+  });
+  
+  const query = Mysql.alter(alter);
+  expect(query[0].query).to.include('DEFAULT NULL');
+  });
+
+   // Line 135
+   it('Should verify that "UNSIGNED" is added when the field is unsigned', async () => {
+    const alter = new Alter('table');
+    alter.changeField('price', {
+      type: 'float',
+      length: [11, 2],
+      unsigned: true,
+      nullable: true
+    });
+  
+    const query = Mysql.alter(alter);
+    expect(query[0].query).to.include('CHANGE COLUMN `price` FLOAT(11, 2) UNSIGNED');
+  });
+
+  
+  // Line 248
+  it('Should throw an exception when no alterations are made in the Alter builder', async () => {
+    const alter = new Alter('table');
+    try {
+      Mysql.alter(alter);
+      throw new Error('Expected exception not thrown');
+    } catch (error) {
+      expect(error.message).to.equal('No alterations made.');
+    }
+  });
+
+
+  // Line 278
+  it('Should throw an exception when no fields are provided to the Create builder', async () => {
+    const create = new Create('table');
+    expect(() => Mysql.create(create)).to.throw('No fields provided');
+  });
+
+  // Line 317
+  it('Should verify that both "default null" and "DEFAULT NULL" are added to the column array', async () => {
+    const create = new Create('table');
+    create.addField('nullableField', { 
+      type: 'string',
+      length: 255,
+      nullable: true
+    });
+    const query = Mysql.create(create);
+    expect(query[0].query).to.include('DEFAULT NULL');
+  });
+
+  // Line 390
+  it('Should throw an exception when no filters are provided in the Delete builder', async () => {
+    const remove = new Delete('table');
+    expect(() => Mysql.delete(remove)).to.throw('No filters provided');
+  });
+
+  // Line 412
+  it('Should throw an exception when no values are provided in the Insert builder', async () => {
+    const insert = new Insert('table');
+    expect(() => Mysql.insert(insert)).to.throw('No values provided');
+  });
+
+  // Line 439
+  it('Should throw an exception when no table is specified in the Select builder', async () => {
+    const select = new Select();
+    expect(() => Mysql.select(select)).to.throw('No table specified');
+  });
+
+  // Line 455
+  it('Should handle table names with special characters in the Select builder', async () => {
+    const select = new Select(['column1', 'column2']);
+    select.from('my-table', 'my-table-alias');
+  
+    const query = Mysql.select(select);
+    expect(query.query).to.include('FROM `my-table` AS `my-table-alias`');
+  });
+
+  // Line 502
+  it('Should throw an exception when build.data is an empty object', async () => {
+    const update = new Update('table');
+    expect(() => Mysql.update(update)).to.throw('No data provided');
+  });
+
 });
