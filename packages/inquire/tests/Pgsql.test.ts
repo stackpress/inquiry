@@ -7,7 +7,7 @@ import Delete from '../src/builder/Delete';
 import Insert from '../src/builder/Insert';
 import Select from '../src/builder/Select';
 import Update from '../src/builder/Update';
-import Pgsql from '../src/dialect/Pgsql';
+import Pgsql, { getDefault, getType } from '../src/dialect/Pgsql';
 
 describe('Pgsql Dialect Tests', () => {
   it('Should translate alter', async () => {
@@ -231,4 +231,141 @@ describe('Pgsql Dialect Tests', () => {
     expect(query.values?.[0]).to.equal('foobar');
     expect(query.values?.[1]).to.equal(1);
   });
+
+  // Line 53
+  it('Should set type to "SMALLINT" when length is exactly 1', () => {
+    const { type, length } = getType('integer', 1);
+    expect(type).to.equal('SMALLINT');
+    expect(length).to.equal(1);
+  });
+
+  // Line 55
+  it('Should set type to BIGINT when length is greater than 11', () => {
+    const { type } = getType('int', 12);
+    expect(type).to.equal('BIGINT');
+  });
+
+  // Line 69
+  
+  // Line 75
+  it('Should return "CURRENT_DATE" when type is "DATE" and value is not an object', () => {
+    const result = getDefault('now()', 'DATE');
+    expect(result).to.equal('CURRENT_DATE');
+  });
+
+  // Line 77
+  it('Should return "CURRENT_TIME" when type is "TIME" and value is "now()"', () => {
+    const value = 'now()';
+    const type = 'TIME';
+    const result = getDefault(value, type);
+    expect(result).to.equal('CURRENT_TIME');
+  });
+  
+  // Line 259
+  it('Should throw an exception when no alterations are made during an alter operation', async () => {
+    const alter = new Alter('table');
+    expect(() => Pgsql.alter(alter)).to.throw('No alterations made.');
+  });
+
+  // Line 290
+  it('Should throw an exception when trying to create a table with no fields provided', async () => {
+    const create = new Create('table');
+    expect(() => Pgsql.create(create)).to.throw('No fields provided');
+  });
+
+  // Line 401
+  it('Should throw an exception when no filters are provided for a delete query', async () => {
+    const deleteBuilder = new Delete('table');
+    expect(() => Pgsql.delete(deleteBuilder)).to.throw('No filters provided');
+  });
+
+  // Line 424
+  it('Should throw an exception when no values are provided in the Insert builder', async () => {
+    const insert = new Insert('table');
+    expect(() => Pgsql.insert(insert)).to.throw('No values provided');
+  });
+
+  // Line 452
+  it('Should throw an exception when no table is specified in the Select builder', async () => {
+    const select = new Select();
+    expect(() => Pgsql.select(select)).to.throw('No table specified');
+  });
+
+  // Line 468
+  it('Should handle table names with special characters in the Select builder', async () => {
+    const select = new Select(['column1', 'column2']);
+    select.from('my-table', 'my-table-alias');
+    const query = Pgsql.select(select);
+    expect(query.query).to.include('FROM "my-table" AS "my-table-alias"');
+  });
+
+  // Line 516
+  it('Should throw an exception when build.data is an empty object', async () => {
+    const update = new Update('table');
+    expect(() => Pgsql.update(update)).to.throw('No data provided');
+  });
+
+
+  /*
+  * ADD UNIT TEST TO ACHIEVE THE 85%
+  */
+
+  it('Should correctly format a column with a type of "boolean" and no default value', async () => {
+    const alter = new Alter('table');
+    alter.addField('active', { 
+      type: 'boolean',
+      nullable: true,
+      comment: 'Active status'
+    });
+    const query = Pgsql.alter(alter);
+    expect(query[0].query).to.include('ADD COLUMN "active" BOOLEAN DEFAULT NULL');
+    expect(query[0].values).to.be.empty;
+  });
+
+  it('Should correctly handle a field with an attribute but no type specified', async () => {
+  const alter = new Alter('table');
+  alter.addField('customField', { 
+    type: 'string',
+    attribute: 'CUSTOM_ATTRIBUTE',
+    nullable: true
+  });
+  const query = Pgsql.alter(alter);
+  expect(query[0].query).to.include('ADD COLUMN "customField" VARCHAR(255) CUSTOM_ATTRIBUTE DEFAULT NULL');
+  expect(query[0].values).to.be.empty;
+  });
+
+  it('Should correctly format a column with a type of "integer" and nullable set to true', async () => {
+    const alter = new Alter('table');
+    alter.addField('age', { 
+      type: 'integer',
+      nullable: true
+    });
+    const query = Pgsql.alter(alter);
+    expect(query[0].query).to.include('ADD COLUMN "age" INTEGER DEFAULT NULL');
+    expect(query[0].values).to.be.empty;
+  });
+
+  it('Should handle a field with a type of "text" and no length specified', async () => {
+  const alter = new Alter('table');
+  alter.changeField('description', {
+    type: 'text',
+    nullable: true,
+    default: undefined
+  });
+  
+  const query = Pgsql.alter(alter);
+  expect(query[0].query).to.include('TYPE TEXT');
+  expect(query[0].query).to.include('DEFAULT NULL');
+  expect(query[0].values).to.be.empty;
+  });
+
+
+
+
+
+
+
+
+
+
 });
