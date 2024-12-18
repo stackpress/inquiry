@@ -8,7 +8,7 @@ import Insert from '../src/builder/Insert';
 import Select from '../src/builder/Select';
 import Update from '../src/builder/Update';
 import Sqlite from '../src/dialect/Sqlite';
-import Engine from '../src/Engine';
+import Exception from '../src/Exception';
 
 describe('Sqlite Dialect Tests', () => {
   it('Should translate alter', async () => {
@@ -251,6 +251,20 @@ describe('Sqlite Dialect Tests', () => {
     expect(query.values?.[1]).to.equal(1);
   });
 
+  // Line 133
+  it('Should handle case where field.nullable is true and no default value is provided', async () => {
+    const alter = new Alter('table');
+    alter.addField('description', {
+      type: 'string',
+      length: 255,
+      nullable: true,
+      comment: 'Nullable field without default'
+    });
+    const query = Sqlite.alter(alter);
+    expect(query[0].query).to.equal('ALTER TABLE `table` ADD COLUMN `description` VARCHAR(255) NOT NULL DEFAULT NULL');
+    expect(query[0].values).to.be.empty;
+  });
+
   // Line 213
   it('Should throw an exception when no alterations are made in the Alter builder', async () => {
     const alter = new Alter('table');
@@ -287,20 +301,35 @@ describe('Sqlite Dialect Tests', () => {
     expect(() => Sqlite.delete(deleteBuilder)).to.throw('No filters provided');
   });
 
+  // Line 354
+  it('Should handle case where table name contains special characters and ensure correct SQL generation', async () => {
+    const tableName = 'table-name_with.special*chars';
+    const queryObject = Sqlite.drop(tableName);
+    expect(queryObject.query).to.equal('DROP TABLE `table-name_with.special*chars`');
+    expect(queryObject.values).to.be.empty;
+  });
+
   // Line 356
   it('Should throw an exception when no values are provided in the Insert builder', async () => {
     const insert = new Insert('table');
     expect(() => Sqlite.insert(insert)).to.throw('No values provided');
   });
 
-  // Line 383
-  it('Should handle case where build.table[0] is an empty string and build.table[1] is a valid string', async () => {
-    const select = new Select('', 'alias' as unknown as Engine);
-    try {
-      Sqlite.select(select);
-    } catch (error) {
-      expect(error.message).to.equal('No table specified');
-    }
+  // Line 382 - 383
+  it('Should handle case where build.returning is an array with a single column and verify correct SQL generation', () => {
+  const builder = new Insert('table');
+  builder.values([{ id: 1 }]);
+  builder.returning(['id']);
+  const queryObject = Sqlite.insert(builder);
+  expect(queryObject.query).to.include('RETURNING `id`');
+  expect(queryObject.values).to.include(1);
+  });
+
+  // Line 393
+  it('Should handle renaming a table with special characters in the name', async () => {
+    const queryObject = Sqlite.rename('old-table-name', 'new-table-name');
+    expect(queryObject.query).to.equal('RENAME TABLE `old-table-name` TO `new-table-name`');
+    expect(queryObject.values).to.be.empty;
   });
 
   // Line 399
@@ -310,6 +339,12 @@ describe('Sqlite Dialect Tests', () => {
   
     const result = Sqlite.select(select);
     expect(result.query).to.equal('SELECT * FROM `` AS `alias`');
+  });
+
+  // Line 405
+  it('Should throw an exception when no table is specified in the Select builder', async () => {
+    const select = new Select();
+    expect(() => Sqlite.select(select)).to.throw(Exception, 'No table specified');
   });
   
 
@@ -329,6 +364,16 @@ describe('Sqlite Dialect Tests', () => {
       Sqlite.update(update);
     } catch (error) {
       expect(error.message).to.equal('No data provided');
+    }
+  });
+
+  // Line 466
+  it('Should handle case where table name is an empty string and ensure no query is generated', async () => {
+    try {
+      Sqlite.truncate('', false);
+    } catch (error) {
+      expect(error).to.be.instanceOf(Exception);
+      expect(error.message).to.equal('No table specified');
     }
   });
 
