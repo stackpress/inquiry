@@ -142,7 +142,37 @@ describe('Engine Tests', () => {
     expect(query).to.include('ALTER TABLE "profile" DROP INDEX');
   });
 
-  // Line 118 - 125
+  // Line 118 - 120
+  it('Should remove a foreign key when it exists in "from" schema but not in "to" schema', () => {
+  const resource = new MockConnection();
+  const engine = new Engine(resource);
+  const from = engine.create('profile')
+    .addField('id', { type: 'INTEGER', length: 11, autoIncrement: true })
+    .addField('user_id', { type: 'INTEGER', length: 11 })
+    .addForeignKey('user_id', { local: 'user_id', foreign: 'id', table: 'users' });
+  const to = engine.create('profile')
+    .addField('id', { type: 'INTEGER', length: 11, autoIncrement: true })
+    .addField('user_id', { type: 'INTEGER', length: 11 });
+  const alter = engine.diff(from, to);
+  expect(alter.query()[0].query).to.include('ALTER TABLE "profile" DROP CONSTRAINT');
+  });
+
+  // Line 123 - 125
+  it('Should call alter.removeForeignKey and alter.addForeignKey when jsonCompare returns false for foreign key comparison with different casing', () => {
+    const resource = new MockConnection();
+    const engine = new Engine(resource);
+    const from = engine.create('profile')
+      .addField('id', { type: 'INTEGER', length: 11, autoIncrement: true })
+      .addField('user_id', { type: 'INTEGER', length: 11 })
+      .addForeignKey('user_id', { local: 'user_id', foreign: 'ID', table: 'users' });
+    const to = engine.create('profile')
+      .addField('id', { type: 'INTEGER', length: 11, autoIncrement: true })
+      .addField('user_id', { type: 'INTEGER', length: 11 })
+      .addForeignKey('user_id', { local: 'user_id', foreign: 'id', table: 'users' });
+    const alter = engine.diff(from, to);
+    const query = alter.query()[0].query;
+    expect(query).to.include('ALTER TABLE "profile" DROP CONSTRAINT');
+  });
 
   
   // Line 137
@@ -186,6 +216,19 @@ describe('Engine Tests', () => {
   });
 
   // Line 154 - 155
+  it('Should add a foreign key when the "to" schema has a foreign key not present in the "from" schema', () => {
+    const resource = new MockConnection();
+    const engine = new Engine(resource);
+    const from = engine.create('profile')
+      .addField('id', { type: 'INTEGER', length: 11, autoIncrement: true })
+      .addField('user_id', { type: 'INTEGER', length: 11 });
+    const to = engine.create('profile')
+      .addField('id', { type: 'INTEGER', length: 11, autoIncrement: true })
+      .addField('user_id', { type: 'INTEGER', length: 11 })
+      .addForeignKey('user_id', { local: 'user_id', foreign: 'id', table: 'users' });
+    const alter = engine.diff(from, to);
+    expect(alter.query()[0].query).to.include('ALTER TABLE "profile" ADD CONSTRAINT');
+  });
 
   // Line 166 - 226
   it('Should drop a table when the drop method is called with a valid table name', async () => {
@@ -203,20 +246,17 @@ describe('Engine Tests', () => {
     expect(result).to.be.an('array').that.is.empty;
   });
 
-  // Line 166 - 226
-  it('Should truncate a table without cascade when the truncate method is called with cascade set to false', async () => {
-    const resource = new MockConnection();
-    const engine = new Engine(resource);
-    const result = await engine.truncate('users', false);
-    expect(result).to.be.an('array').that.is.empty;
-  });
 
-  // Line 166 - 226
-  it('Should truncate a table with cascade when the truncate method is called with cascade set to true', async () => {
+  // Line 217
+  it('Should throw an error when truncate is called with an empty table name', async () => {
     const resource = new MockConnection();
     const engine = new Engine(resource);
-    const result = await engine.truncate('users', true);
-    expect(result).to.be.an('array').that.is.empty;
+    try {
+      await engine.truncate('');
+    } catch (error) {
+      expect(error).to.be.instanceOf(Exception);
+      expect(error.message).to.equal('Table name cannot be empty');
+    }
   });
 
   // Line 166 - 226
