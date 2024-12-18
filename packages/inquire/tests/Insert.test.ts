@@ -61,16 +61,35 @@ describe('Insert Builder Tests', () => {
     expect(() => insert.then((res) => res)).to.throw(Exception, 'No engine provided');
   });
 
-  // Line 78
-  it('Should handle a single record object as input and convert it to an array', () => {
+
+  // Line 76
+  it('Should set _returning to the provided array when columns is an array', () => {
     const insert = new Insert('table');
-    const singleRecord = { id: 1, name: 'single' };
-    insert.values(singleRecord);
-    const build = insert.build();
-    expect(build.values).to.be.an('array');
-    expect(build.values).to.have.lengthOf(1);
-    expect(build.values[0]).to.deep.equal(singleRecord);
+    const columnsArray = ['column1', 'column2'];
+    insert.returning(columnsArray);
+    expect(insert.build().returning).to.deep.equal(columnsArray);
   });
+
+  
+  // Line 78 - 80
+  it('Should set _returning to an array with a single "*" when no argument is provided', () => {
+    const insert = new Insert('table');
+    insert.returning();
+    expect(insert.build().returning).to.deep.equal(['*']);
+  });
+
+
+  // Line 96
+  it('Should convert a single non-array value to an array when passed to values method', () => {
+    const insert = new Insert('table');
+    const singleValue = { id: 1, name: 'single' };
+    insert.values(singleValue);
+    const build = insert.build();
+    expect(build.values).to.be.an('array').that.has.lengthOf(1);
+    expect(build.values[0]).to.deep.equal(singleValue);
+  });
+
+  
 
 
 });
