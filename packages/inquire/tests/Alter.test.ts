@@ -108,29 +108,36 @@ describe('Alter Builder Tests', () => {
     expect(() => alter.query()).to.throw('No dialect provided');
   });
 
-  
-  // Line 198 - 201
-  it('Should return a promise when query method is called with a valid engine', () => {
-    const mockDialect = {
-      alter: () => 'mock query'
-    };
-    const mockEngine = {
-      query: () => Promise.resolve(['result']),
-      dialect: mockDialect
-    } as unknown as Engine;
-    const alter = new Alter('table', mockEngine);
-    const result = alter.then((res) => res);
-    expect(result).to.be.a('promise');
-    return result.then((res) => {
-      expect(res).to.deep.equal(['result']);
-    });
-  });
-
   // Line 198 - 201
   it('Should throw an exception when no engine is provided', () => {
     const alter = new Alter('table', undefined as unknown as Engine);
     expect(() => alter.then((res) => res)).to.throw(Exception, 'No engine provided');
   });
-  
+
+  // Line 198 - 209
+  it('Should handle rejection if any query in the transaction fails', () => {
+    const mockDialect = {
+      alter: () => ['query1', 'query2']};
+    const mockEngine = {
+      transaction: (callback: any) => {
+        return callback({
+          query: (formattedQuery: string) => {
+            if (formattedQuery === 'query1') {
+              return Promise.resolve();
+            } else {
+              return Promise.reject(new Error('Query failed'));
+            }},
+          format: (query: string) => query
+        });
+      },
+      dialect: mockDialect} as unknown as Engine;
+    const alter = new Alter('table', mockEngine);
+    return alter.then(() => {
+      throw new Error('Expected promise to be rejected');
+    }).catch((error) => {
+      expect(error).to.be.an('error');
+      expect(error.message).to.equal('Query failed');
+    });
+  });
   
 });

@@ -4,6 +4,7 @@ import { expect } from 'chai';
 import Create from '../src/builder/Create';
 import Engine from '../src/Engine';
 import Exception from '../src/Exception';
+import { QueryObject } from '../src/types';
 
 describe('Create Builder Tests', () => {
   it('Should build create', async () => {
@@ -86,26 +87,27 @@ describe('Create Builder Tests', () => {
   });
 
   // Line 128 - 143
-  it('Should return a promise when query method is called with a valid engine', () => {
-    const mockDialect = {
-      create: () => 'mock query'
-    };
-    const mockEngine = {
-      query: () => Promise.resolve(['result']),
-      dialect: mockDialect
-    } as unknown as Engine;
-    const create = new Create('table', mockEngine);
-    const result = create.then((res) => res);
-    expect(result).to.be.a('promise');
-    return result.then((res) => {
-      expect(res).to.deep.equal(['result']);
-    });
-  });
-
-  // Line 128 - 143
   it('Should throw an exception when no engine is provided', () => {
     const create = new Create('table', undefined as unknown as Engine);
     expect(() => create.then((res) => res)).to.throw(Exception, 'No engine provided');
+  });
+
+  // Line 145 - 156
+  it('Should handle multiple queries correctly and return the result of the last query', async () => {
+    const mockEngine = {
+      transaction: async (callback: any) => {
+        const mockConnection = {
+          query: async (query: string) => query,
+          format: (request: QueryObject) => request.query};
+        return callback(mockConnection);},
+      dialect: {
+        create: (createInstance: Create) => [
+          { query: 'INSERT INTO table (field1) VALUES (value1)' },
+          { query: 'INSERT INTO table (field2) VALUES (value2)' }
+        ]}} as unknown as Engine;
+    const create = new Create('table', mockEngine);
+    const result = await create.then((res) => res);
+    expect(result).to.equal('INSERT INTO table (field2) VALUES (value2)');
   });
 
 });
