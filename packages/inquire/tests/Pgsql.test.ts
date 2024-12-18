@@ -273,6 +273,25 @@ describe('Pgsql Dialect Tests', () => {
     expect(() => Pgsql.create(create)).to.throw('No fields provided');
   });
 
+  // Line 321
+  it('Should handle case where field.default is an empty string and ensure no default value is set', () => {
+    const create = new Create('table');
+    create.addField('name', {
+      type: 'string',
+      length: 255,
+      default: '',
+      nullable: true,
+      comment: 'Foobar'
+    });
+    const query = Pgsql.create(create);
+    expect(query[0].query).to.equal(
+      'CREATE TABLE IF NOT EXISTS "table" ('
+      + '"name" VARCHAR(255) DEFAULT NULL'
+      + ')'
+    );
+    expect(query[0].values).to.be.empty;
+  });
+
   // Line 401
   it('Should throw an exception when no filters are provided for a delete query', async () => {
     const deleteBuilder = new Delete('table');
@@ -283,6 +302,16 @@ describe('Pgsql Dialect Tests', () => {
   it('Should throw an exception when no values are provided in the Insert builder', async () => {
     const insert = new Insert('table');
     expect(() => Pgsql.insert(insert)).to.throw('No values provided');
+  });
+
+  // Line 450 - 451
+  it('Should handle case where build.returning is an array with a single column and verify correct SQL generation', () => {
+    const builder = new Insert('table');
+    builder.values([{ id: 1 }]);
+    builder.returning(['id']);
+    const queryObject = Pgsql.insert(builder);
+    expect(queryObject.query).to.include('RETURNING "id"');
+    expect(queryObject.values).to.include(1);
   });
 
   // Line 452
