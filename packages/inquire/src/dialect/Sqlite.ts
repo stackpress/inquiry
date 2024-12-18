@@ -348,6 +348,13 @@ const Sqlite: Dialect = {
   },
 
   /**
+   * Drops a table
+   */
+  drop(table: string) {
+    return { query: `DROP TABLE ${q}${table}${q}`, values: [] };
+  },
+
+  /**
    * Converts insert builder to query and values
    */
   insert(builder: Insert) {
@@ -371,7 +378,22 @@ const Sqlite: Dialect = {
     });
 
     query.push(`VALUES ${row.join(', ')}`);
+    if (build.returning.length) {
+      query.push(`RETURNING ${build.returning.map(
+        column => column !== '*' ? `${q}${column}${q}` : column
+      ).join(', ')}`);
+    }
     return { query: query.join(' '), values };
+  },
+
+  /**
+   * Renames a table
+   */
+  rename(from: string, to: string) {
+    return { 
+      query: `RENAME TABLE ${q}${from}${q} TO ${q}${to}${q}`, 
+      values: [] 
+    };
   },
 
   /**
@@ -435,6 +457,16 @@ const Sqlite: Dialect = {
     }
 
     return { query: query.join(' '), values };
+  },
+
+  /**
+   * Truncate table
+   */
+  truncate(table: string, cascade = false) {
+    return { 
+      query: `TRUNCATE TABLE ${q}${table}${q}${cascade && ' CASCADE'}`, 
+      values: [] 
+    };
   },
 
   /**

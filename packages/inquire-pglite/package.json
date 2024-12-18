@@ -1,6 +1,6 @@
 {
   "name": "@stackpress/inquire-pglite",
-  "version": "0.1.3",
+  "version": "0.2.3",
   "license": "Apache-2.0",
   "description": "Generic typed pglite",
   "author": "Chris <chris@incept.asia>",
@@ -17,10 +17,10 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "nyc ts-mocha tests/*.test.ts"
+    "test": "nyc ts-mocha tests/*.test.ts && rm -rf ./tests/database"
   },
   "dependencies": {
-    "@stackpress/inquire": "0.1.3"
+    "@stackpress/inquire": "0.2.3"
   },
   "peerDependencies": {
     "@electric-sql/pglite": "^0.2.14"

@@ -415,6 +415,13 @@ const Pgsql: Dialect = {
   },
 
   /**
+   * Drops a table
+   */
+  drop(table: string) {
+    return { query: `DROP TABLE ${q}${table}${q}`, values: [] };
+  },
+
+  /**
    * Converts insert builder to query and values
    * results: [ { rows: [], fields: [], affectedRows: 0 } ]
    */
@@ -432,14 +439,29 @@ const Pgsql: Dialect = {
     const keys = Object.keys(build.values[0]);
     query.push(`(${q}${keys.join(`${q}, ${q}`)}${q})`);
 
-    const row = build.values.map((value) => {
+    const rows = build.values.map((value) => {
       const row = keys.map(key => value[key]);
       values.push(...row);
       return `(${row.map(() => '?').join(', ')})`;
     });
 
-    query.push(`VALUES ${row.join(', ')}`);
+    query.push(`VALUES ${rows.join(', ')}`);
+    if (build.returning.length) {
+      query.push(`RETURNING ${build.returning.map(
+        column => column !== '*' ? `${q}${column}${q}` : column
+      ).join(', ')}`);
+    }
     return { query: query.join(' '), values };
+  },
+
+  /**
+   * Renames a table
+   */
+  rename(from: string, to: string) {
+    return { 
+      query: `RENAME TABLE ${q}${from}${q} TO ${q}${to}${q}`, 
+      values: [] 
+    };
   },
 
   /**
@@ -504,6 +526,16 @@ const Pgsql: Dialect = {
     }
 
     return { query: query.join(' '), values };
+  },
+
+  /**
+   * Truncate table
+   */
+  truncate(table: string, cascade = false) {
+    return { 
+      query: `TRUNCATE TABLE ${q}${table}${q}${cascade && ' CASCADE'}`, 
+      values: [] 
+    };
   },
 
   /**

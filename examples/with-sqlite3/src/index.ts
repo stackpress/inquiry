@@ -16,7 +16,8 @@ async function main() {
 
   const insert = engine
     .insert('profile')
-    .values({ id: '1', name: 'John Doe' });
+    .values({ id: '1', name: 'John Doe' })
+    .returning('*');
   console.log(insert.query());
   console.log(JSON.stringify(await insert, null, 2));
 
