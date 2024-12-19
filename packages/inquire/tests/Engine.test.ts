@@ -53,6 +53,12 @@ describe('Engine Tests', () => {
       + `ALTER COLUMN "active" TYPE BOOLEAN, `
       + `ALTER COLUMN "active" SET DEFAULT TRUE, `
       + `DROP INDEX "active"`);
+
+    try {
+      engine.diff(from, from).query()
+    } catch (error) {
+      expect(error.message).to.equal('No alterations made.');
+    }
   });
 });
 
