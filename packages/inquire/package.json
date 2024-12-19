@@ -1,6 +1,6 @@
 {
   "name": "@stackpress/inquire",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "license": "Apache-2.0",
   "description": "Generic typed SQL",
   "author": "Chris <chris@incept.asia>",
@@ -20,7 +20,7 @@
     "test": "nyc ts-mocha tests/*.test.ts"
   },
   "dependencies": {
-    "@stackpress/types": "0.3.10"
+    "@stackpress/types": "0.3.11"
   },
   "devDependencies": {
     "@types/chai": "4.3.20",
