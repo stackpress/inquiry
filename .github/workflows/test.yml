@@ -14,4 +14,4 @@ jobs:
       - name: Building code
         run: yarn build
       - name: Run tests
-        run: yarn test
+        run: yarn test:inquire
