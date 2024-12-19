@@ -133,5 +133,5 @@ export interface Connection {
   /**
    * Common pattern to invoke a transaction
    */
-  transaction<R = unknown>(callback: Transaction<R>): Promise<R[]>;
+  transaction<R = unknown>(callback: Transaction<R>): Promise<R>;
 };
