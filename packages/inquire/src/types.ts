@@ -101,7 +101,7 @@ export type Dialect = {
   insert(builder: Insert): QueryObject;
   rename(from: string, to: string): QueryObject;
   select(builder: Select): QueryObject;
-  truncate(table: string, cascade: boolean): QueryObject;
+  truncate(table: string, cascade?: boolean): QueryObject;
   update(builder: Update): QueryObject;
 };
 
@@ -110,7 +110,7 @@ export type Dialect = {
 
 export type QueryObject = { query: string, values?: Value[] };
 
-export type Transaction<R = unknown> = (tx: Connection) => Promise<R[]>;
+export type Transaction<R = unknown> = (tx: Connection) => Promise<R>;
 
 export interface Connection {
   //sql language dialect
