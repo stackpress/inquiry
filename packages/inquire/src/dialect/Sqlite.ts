@@ -462,7 +462,7 @@ const Sqlite: Dialect = {
    */
   truncate(table: string, cascade = false) {
     return { 
-      query: `TRUNCATE TABLE ${q}${table}${q}${cascade && ' CASCADE'}`, 
+      query: `TRUNCATE TABLE ${q}${table}${q}${cascade ? ' CASCADE' : ''}`, 
       values: [] 
     };
   },
