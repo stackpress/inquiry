@@ -458,13 +458,11 @@ const Mysql: Dialect = {
 
     const query: string[] = [];
     const values: FlatValue[] = [];
-
     const columns = build.columns
-      .map(column => column.split(' '))
+      .map(column => column.split(','))
       .flat(1)
-      .map(column => `${q}${
-        column.split('.').join(`${q}.${q}`)
-      }${q}`.replaceAll(`${q}*${q}`, '*'));
+      .map(column => column.trim())
+      .filter(Boolean);
 
     query.push(`SELECT ${columns.join(', ')}`);
     if (build.table) {
