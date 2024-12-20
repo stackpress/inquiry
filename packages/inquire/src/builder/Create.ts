@@ -148,7 +148,7 @@ export default class Create<R = unknown> {
     }
     const queries = this.query();
     const last = queries.pop() as QueryObject;
-    return this._engine.transaction<R>(async connection => {
+    return this._engine.transaction<R[]>(async connection => {
       for (const request of queries) {
         await connection.query<R>(connection.format(request));
       }
