@@ -1,6 +1,6 @@
 {
   "name": "@stackpress/inquire-mysql2",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "license": "Apache-2.0",
   "description": "Generic typed mysql2",
   "author": "Chris <chris@incept.asia>",
@@ -19,7 +19,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@stackpress/inquire": "0.2.8"
+    "@stackpress/inquire": "0.2.9"
   },
   "peerDependencies": {
     "mysql2": "^3.11.5"
