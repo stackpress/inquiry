@@ -305,7 +305,7 @@ describe('Sqlite Dialect Tests', () => {
   it('Should handle case where table name contains special characters and ensure correct SQL generation', async () => {
     const tableName = 'table-name_with.special*chars';
     const queryObject = Sqlite.drop(tableName);
-    expect(queryObject.query).to.equal('DROP TABLE `table-name_with.special*chars`');
+    expect(queryObject.query).to.equal('DROP TABLE IF EXISTS `table-name_with.special*chars`');
     expect(queryObject.values).to.be.empty;
   });
 

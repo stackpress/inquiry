@@ -1,6 +1,6 @@
 {
   "name": "@stackpress/inquire",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "license": "Apache-2.0",
   "description": "Generic typed SQL",
   "author": "Chris <chris@incept.asia>",
