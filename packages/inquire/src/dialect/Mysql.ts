@@ -407,7 +407,7 @@ const Mysql: Dialect = {
    * Drops a table
    */
   drop(table: string) {
-    return { query: `DROP TABLE ${q}${table}${q}`, values: [] };
+    return { query: `DROP TABLE IF EXISTS ${q}${table}${q}`, values: [] };
   },
 
   /**
