@@ -344,8 +344,8 @@ const Pgsql: Dialect = {
     // UNIQUE name (column1_name, column2_name)
 
     if (Object.keys(build.unique).length) {
-      query.push(Object.keys(build.unique).map(
-        key => `, UNIQUE (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
+      query.push(', ' + Object.keys(build.unique).map(
+        key => `UNIQUE (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
       ).join(', '));
     }
 
@@ -357,9 +357,9 @@ const Pgsql: Dialect = {
     // ON DELETE CASCADE
     // ON UPDATE RESTRICT
     if (Object.keys(build.foreign).length) {
-      query.push(Object.entries(build.foreign).map(([ name, info ]) => {
+      query.push(', ' + Object.entries(build.foreign).map(([ name, info ]) => {
         return [
-          `, CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q})`,
+          `CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q})`,
           `REFERENCES ${q}${info.table}${q}(${q}${info.foreign}${q})`,
           info.delete ? `ON DELETE ${info.delete}`: '', 
           info.update ? `ON UPDATE ${info.update}`: ''
