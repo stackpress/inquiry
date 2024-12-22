@@ -292,6 +292,47 @@ describe('Pgsql Dialect Tests', () => {
     expect(query[0].values).to.be.empty;
   });
 
+  it('Should translate create with multiple indexes, uniques and FKs', () => {
+    const create = new Create('table');
+    create.addField('name', {
+      type: 'string',
+      length: 255,
+      default: '',
+      nullable: true,
+      comment: 'Foobar'
+    });
+    create.addKey('foo', [ 'bar', 'zoo' ]);
+    create.addKey('bar', [ 'zoo', 'foo' ]);
+    create.addUniqueKey('foo', [ 'bar', 'zoo' ]);
+    create.addUniqueKey('bar', [ 'zoo', 'foo' ]);
+    create.addForeignKey('foo', {
+      local: 'bar',
+      foreign: 'zoo',
+      table: 'foo',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    create.addForeignKey('bar', {
+      local: 'zoo',
+      foreign: 'foo',
+      table: 'bar',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    const query = Pgsql.create(create);
+    expect(query[0].query).to.equal(
+      'CREATE TABLE IF NOT EXISTS "table" ('
+        + '"name" VARCHAR(255) DEFAULT NULL , '
+        + 'UNIQUE ("bar", "zoo"), '
+        + 'UNIQUE ("zoo", "foo") , '
+        + 'CONSTRAINT "foo" FOREIGN KEY ("bar") REFERENCES "foo"("zoo") ON DELETE CASCADE ON UPDATE RESTRICT, '
+        + 'CONSTRAINT "bar" FOREIGN KEY ("zoo") REFERENCES "bar"("foo") ON DELETE CASCADE ON UPDATE RESTRICT'
+      + ')'
+    );
+
+    expect(query[0].values).to.be.empty;
+  });
+
   // Line 401
   it('Should throw an exception when no filters are provided for a delete query', async () => {
     const deleteBuilder = new Delete('table');
@@ -375,17 +416,17 @@ describe('Pgsql Dialect Tests', () => {
   });
 
   it('Should handle a field with a type of "text" and no length specified', async () => {
-  const alter = new Alter('table');
-  alter.changeField('description', {
-    type: 'text',
-    nullable: true,
-    default: undefined
-  });
-  
-  const query = Pgsql.alter(alter);
-  expect(query[0].query).to.include('TYPE TEXT');
-  expect(query[0].query).to.include('DEFAULT NULL');
-  expect(query[0].values).to.be.empty;
+    const alter = new Alter('table');
+    alter.changeField('description', {
+      type: 'text',
+      nullable: true,
+      default: undefined
+    });
+    
+    const query = Pgsql.alter(alter);
+    expect(query[0].query).to.include('TYPE TEXT');
+    expect(query[0].query).to.include('DEFAULT NULL');
+    expect(query[0].values).to.be.empty;
   });
 
 

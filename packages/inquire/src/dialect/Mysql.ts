@@ -340,8 +340,8 @@ const Mysql: Dialect = {
     // UNIQUE KEY name (column1_name, column2_name)
 
     if (Object.keys(build.keys).length) {
-      query.push(Object.keys(build.unique).map(
-        key => `, UNIQUE KEY ${q}${key}${q} (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
+      query.push(', ' + Object.keys(build.unique).map(
+        key => `UNIQUE KEY ${q}${key}${q} (${q}${build.unique[key].join(`${q}, ${q}`)}${q})`
       ).join(', '));
     }
 
@@ -351,8 +351,8 @@ const Mysql: Dialect = {
     // KEY name (column1_name, column2_name)
 
     if (Object.keys(build.keys).length) {
-      query.push(Object.keys(build.keys).map(
-        key => `, KEY ${q}${key}${q} (${q}${build.keys[key].join(`${q}, ${q}`)}${q})`
+      query.push(', ' + Object.keys(build.keys).map(
+        key => `KEY ${q}${key}${q} (${q}${build.keys[key].join(`${q}, ${q}`)}${q})`
       ).join(', '));
     }
 
@@ -363,9 +363,9 @@ const Mysql: Dialect = {
     // ON DELETE CASCADE
     // ON UPDATE RESTRICT
     if (Object.keys(build.foreign).length) {
-      query.push(Object.entries(build.foreign).map(([ name, info ]) => {
+      query.push(', ' + Object.entries(build.foreign).map(([ name, info ]) => {
         return [
-          `, CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q})`,
+          `CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q})`,
           `REFERENCES ${q}${info.table}${q}(${q}${info.foreign}${q})`,
           info.delete ? `ON DELETE ${info.delete}`: '', 
           info.update ? `ON UPDATE ${info.update}`: ''
