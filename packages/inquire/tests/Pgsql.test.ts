@@ -76,28 +76,60 @@ describe('Pgsql Dialect Tests', () => {
     });
 
     const query = Pgsql.alter(alter);
+    
     expect(query[0].query).to.equal(
-      'ALTER TABLE "table" '
-        + 'DROP COLUMN "price", '
-        + 'ADD COLUMN "id" SERIAL NOT NULL, '
-        + 'ADD COLUMN "profileId" INTEGER NOT NULL, '
-        + 'ADD COLUMN "name" VARCHAR(255) DEFAULT \'foobar\', '
-        + 'ADD COLUMN "price" DECIMAL(11, 2) DEFAULT 1.1, '
-        + 'ADD COLUMN "active" BOOLEAN DEFAULT TRUE, '
-        + 'ADD COLUMN "date" TIMESTAMP DEFAULT CURRENT_TIMESTAMP, '
-        + 'ALTER COLUMN "name" TYPE VARCHAR(255), '
-        + 'ALTER COLUMN "name" SET DEFAULT \'foobar\', '
-        + 'DROP CONSTRAINT "id", '
-        + 'ADD PRIMARY KEY ("id"), '
-        + 'DROP UNIQUE "name", '
-        + 'ADD UNIQUE "name" ("name"), '
-        + 'DROP INDEX "price", '
-        + 'ADD INDEX "price" ("name"), '
-        + 'DROP CONSTRAINT "profileId", '
-        + 'ADD CONSTRAINT "profileId" FOREIGN KEY ("profileId") '
-        + 'REFERENCES "profile"("id") ON DELETE CASCADE ON UPDATE RESTRICT'
+      'ALTER TABLE "table" DROP COLUMN "price"'
     );
-    expect(query[0].values).to.be.empty;
+    expect(query[1].query).to.equal(
+      'ALTER TABLE "table" ADD COLUMN "id" SERIAL NOT NULL'
+    );
+    expect(query[2].query).to.equal(
+      'ALTER TABLE "table" ADD COLUMN "profileId" INTEGER NOT NULL'
+    );
+    expect(query[3].query).to.equal(
+      'ALTER TABLE "table" ADD COLUMN "name" VARCHAR(255) DEFAULT \'foobar\''
+    );
+    expect(query[4].query).to.equal(
+      'ALTER TABLE "table" ADD COLUMN "price" DECIMAL(11, 2) DEFAULT 1.1'
+    );
+    expect(query[5].query).to.equal(
+      'ALTER TABLE "table" ADD COLUMN "active" BOOLEAN DEFAULT TRUE'
+    );
+    expect(query[6].query).to.equal(
+      'ALTER TABLE "table" ADD COLUMN "date" TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    );
+    expect(query[7].query).to.equal(
+      'ALTER TABLE "table" ALTER COLUMN "name" TYPE VARCHAR(255)'
+    );
+    expect(query[8].query).to.equal(
+      'ALTER TABLE "table" ALTER COLUMN "name" SET DEFAULT \'foobar\''
+    );
+    expect(query[9].query).to.equal(
+      'ALTER TABLE "table" DROP CONSTRAINT "id"'
+    );
+    expect(query[10].query).to.equal(
+      'ALTER TABLE "table" ADD PRIMARY KEY ("id")'
+    );
+    expect(query[11].query).to.equal(
+      'ALTER TABLE "table" DROP UNIQUE "name"'
+    );
+    expect(query[12].query).to.equal(
+      'ALTER TABLE "table" ADD UNIQUE "name" ("name")'
+    );
+    expect(query[13].query).to.equal(
+      'ALTER TABLE "table" DROP INDEX "price"'
+    );
+    expect(query[14].query).to.equal(
+      'ALTER TABLE "table" ADD INDEX "price" ("name")'
+    );
+    expect(query[15].query).to.equal(
+      'ALTER TABLE "table" DROP CONSTRAINT "profileId"'
+    );
+    expect(query[16].query).to.equal(
+      'ALTER TABLE "table" ADD CONSTRAINT "profileId" '
+      + 'FOREIGN KEY ("profileId") REFERENCES "profile"("id") '
+      + 'ON DELETE CASCADE ON UPDATE RESTRICT '
+    );
   });
 
   it('Should translate create', async () => {
@@ -227,7 +259,7 @@ describe('Pgsql Dialect Tests', () => {
     update.where('id = ?', [ 1 ]);
 
     const query = Pgsql.update(update);
-    expect(query.query).to.equal('UPDATE "table" SET name = ? WHERE id = ?');
+    expect(query.query).to.equal('UPDATE "table" SET "name" = ? WHERE id = ?');
     expect(query.values?.[0]).to.equal('foobar');
     expect(query.values?.[1]).to.equal(1);
   });
@@ -236,7 +268,7 @@ describe('Pgsql Dialect Tests', () => {
   it('Should set type to "SMALLINT" when length is exactly 1', () => {
     const { type, length } = getType('integer', 1);
     expect(type).to.equal('SMALLINT');
-    expect(length).to.equal(1);
+    expect(length).to.be.undefined;
   });
 
   // Line 55
@@ -292,47 +324,6 @@ describe('Pgsql Dialect Tests', () => {
     expect(query[0].values).to.be.empty;
   });
 
-  it('Should translate create with multiple indexes, uniques and FKs', () => {
-    const create = new Create('table');
-    create.addField('name', {
-      type: 'string',
-      length: 255,
-      default: '',
-      nullable: true,
-      comment: 'Foobar'
-    });
-    create.addKey('foo', [ 'bar', 'zoo' ]);
-    create.addKey('bar', [ 'zoo', 'foo' ]);
-    create.addUniqueKey('foo', [ 'bar', 'zoo' ]);
-    create.addUniqueKey('bar', [ 'zoo', 'foo' ]);
-    create.addForeignKey('foo', {
-      local: 'bar',
-      foreign: 'zoo',
-      table: 'foo',
-      delete: 'CASCADE',
-      update: 'RESTRICT'
-    });
-    create.addForeignKey('bar', {
-      local: 'zoo',
-      foreign: 'foo',
-      table: 'bar',
-      delete: 'CASCADE',
-      update: 'RESTRICT'
-    });
-    const query = Pgsql.create(create);
-    expect(query[0].query).to.equal(
-      'CREATE TABLE IF NOT EXISTS "table" ('
-        + '"name" VARCHAR(255) DEFAULT NULL , '
-        + 'UNIQUE ("bar", "zoo"), '
-        + 'UNIQUE ("zoo", "foo") , '
-        + 'CONSTRAINT "foo" FOREIGN KEY ("bar") REFERENCES "foo"("zoo") ON DELETE CASCADE ON UPDATE RESTRICT, '
-        + 'CONSTRAINT "bar" FOREIGN KEY ("zoo") REFERENCES "bar"("foo") ON DELETE CASCADE ON UPDATE RESTRICT'
-      + ')'
-    );
-
-    expect(query[0].values).to.be.empty;
-  });
-
   // Line 401
   it('Should throw an exception when no filters are provided for a delete query', async () => {
     const deleteBuilder = new Delete('table');
@@ -374,11 +365,6 @@ describe('Pgsql Dialect Tests', () => {
     const update = new Update('table');
     expect(() => Pgsql.update(update)).to.throw('No data provided');
   });
-
-
-  /*
-  * ADD UNIT TEST TO ACHIEVE THE 85%
-  */
 
   it('Should correctly format a column with a type of "boolean" and no default value', async () => {
     const alter = new Alter('table');
@@ -425,17 +411,57 @@ describe('Pgsql Dialect Tests', () => {
     
     const query = Pgsql.alter(alter);
     expect(query[0].query).to.include('TYPE TEXT');
-    expect(query[0].query).to.include('DEFAULT NULL');
+    expect(query[1].query).to.include('DEFAULT NULL');
     expect(query[0].values).to.be.empty;
+    expect(query[1].values).to.be.empty;
   });
 
+  it('Should translate create with multiple indexes, uniques and FKs', () => {
+    const create = new Create('table');
+    create.addField('name', {
+      type: 'string',
+      length: 255,
+      default: '',
+      nullable: true,
+      comment: 'Foobar'
+    });
+    create.addKey('foo', [ 'bar', 'zoo' ]);
+    create.addKey('bar', [ 'zoo', 'foo' ]);
+    create.addUniqueKey('foo', [ 'bar', 'zoo' ]);
+    create.addUniqueKey('bar', [ 'zoo', 'foo' ]);
+    create.addForeignKey('foo', {
+      local: 'bar',
+      foreign: 'zoo',
+      table: 'foo',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    create.addForeignKey('bar', {
+      local: 'zoo',
+      foreign: 'foo',
+      table: 'bar',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    const query = Pgsql.create(create);
+    expect(query[0].query).to.equal(
+      'CREATE TABLE IF NOT EXISTS "table" ('
+        + '"name" VARCHAR(255) DEFAULT NULL , '
+        + 'UNIQUE ("bar", "zoo"), '
+        + 'UNIQUE ("zoo", "foo") , '
+        + 'CONSTRAINT "foo" FOREIGN KEY ("bar") REFERENCES "foo"("zoo") '
+        + 'ON DELETE CASCADE ON UPDATE RESTRICT, '
+        + 'CONSTRAINT "bar" FOREIGN KEY ("zoo") REFERENCES "bar"("foo") '
+        + 'ON DELETE CASCADE ON UPDATE RESTRICT'
+      + ')'
+    );
+    expect(query[1].query).to.equal(
+      'CREATE INDEX "foo" ON "table"("bar", "zoo")'
+    );
+    expect(query[2].query).to.equal(
+      'CREATE INDEX "bar" ON "table"("zoo", "foo")'
+    );
 
-
-
-
-
-
-
-
-
+    expect(query[0].values).to.be.empty;
+  });
 });

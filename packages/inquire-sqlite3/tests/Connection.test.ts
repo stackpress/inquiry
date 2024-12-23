@@ -3,15 +3,15 @@ import { expect } from 'chai';
 
 //modules
 import path from 'path';
-import { PGlite } from '@electric-sql/pglite';
+import sqlite from 'better-sqlite3';
 //stackpress
 import Engine from '@stackpress/inquire/dist/Engine';
 //local
 import Connection from '../src/Connection';
 
-describe('PGConnection Tests', () => {
-  //this is the raw resource
-  const resource = new PGlite(path.join(__dirname, 'database'));
+describe('Sqlite3 Tests', () => {
+  //this is the raw resource, anything you want
+  const resource = sqlite(':memory:');
   //this is the connection
   const connection = new Connection(resource);
   //this is the engine
@@ -22,25 +22,18 @@ describe('PGConnection Tests', () => {
       .addField('id', { type: 'int', autoIncrement: true })
       .addField('name', { type: 'string', length: 255 })
       .addField('price', { type: 'float', length: [ 10, 2 ], unsigned: true })
-      .addField('tags', { type: 'json' })
-      .addField('references', { type: 'json', nullable: true })
-      .addField('active', { type: 'boolean', default: true })
+      .addField('age', { type: 'int', unsigned: true })
       .addField('created', { type: 'date', default: 'now()' })
       .addPrimaryKey('id')
       .addUniqueKey('name', 'name');
     expect(a1).to.be.empty;
-    const a2 = await engine.alter('profile')
-      .addField('age', { type: 'int', unsigned: true })
-      .removeField('price')
-      .changeField('created', { type: 'datetime', default: 'now()' });
-    expect(a2).to.be.empty;
     const a3 = await engine.insert('profile').values([
-      { name: 'John Doe', age: 30, active: false, tags: [ 'foo', 'bar' ] },
-      { name: 'Jane Doe', age: 25, active: true, tags: [ 'bar', 'foo' ] }
+      { name: 'John Doe', age: 30 },
+      { name: 'Jane Doe', age: 25 }
     ]);
     expect(a3).to.be.empty;
     const a4 = await engine.update('profile')
-      .set({ age: 31, active: false, references: { foo: 'bar' } })
+      .set({ age: 31 })
       .where('name = ?', [ 'Jane Doe' ]);
     expect(a4).to.be.empty;
     const a5 = await engine.delete('profile')
@@ -50,20 +43,12 @@ describe('PGConnection Tests', () => {
       id: number,
       name: string,
       created: Date,
-      age: number,
-      active: boolean,
-      tags: string[],
-      references: Record<string, string>
+      age: number
     }>('*').from('profile');
     expect(a6[0].id).to.equal(2);
     expect(a6[0].name).to.equal('Jane Doe');
     expect(a6[0].age).to.equal(31);
-    expect(a6[0].tags[0]).to.equal('bar');
-    expect(a6[0].tags[1]).to.equal('foo');
-    expect(a6[0].references.foo).to.equal('bar');
-    expect(a6[0].active).to.equal(false);
-    expect(a6[0].created).to.be.instanceOf(Date);
-    resource.close();
+    expect(typeof a6[0].created).to.equal('string')
   }).timeout(20000);
 
   it('Should flatten data', () => {
@@ -93,6 +78,6 @@ describe('PGConnection Tests', () => {
     expect(actual.values[1]).to.equal('foobar');
     expect(actual.values[2]).to.equal('["foo","bar"]');
     expect(actual.values[3]).to.equal('{"foo":"bar"}');
-    expect(actual.values[4]).to.equal(true);
+    expect(actual.values[4]).to.equal(1);
   });
 });

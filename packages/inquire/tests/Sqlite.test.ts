@@ -170,7 +170,7 @@ describe('Sqlite Dialect Tests', () => {
     const query = Sqlite.create(create);
     expect(query[0].query).to.equal(
       "CREATE TABLE IF NOT EXISTS `table` ("
-      + "`id` INTEGER AUTOINCREMENT PRIMARY KEY, "
+      + "`id` INTEGER PRIMARY KEY AUTOINCREMENT, "
       + "`profileId` INTEGER, "
       + "`name` VARCHAR(255) NOT NULL DEFAULT 'foobar', "
       + "`price` REAL NOT NULL DEFAULT 1.1, "
@@ -246,7 +246,7 @@ describe('Sqlite Dialect Tests', () => {
     update.where('id = ?', [1]);
 
     const query = Sqlite.update(update);
-    expect(query.query).to.equal("UPDATE `table` SET name = ? WHERE id = ?");
+    expect(query.query).to.equal("UPDATE `table` SET `name` = ? WHERE id = ?");
     expect(query.values?.[0]).to.equal('foobar');
     expect(query.values?.[1]).to.equal(1);
   });
@@ -328,7 +328,7 @@ describe('Sqlite Dialect Tests', () => {
   // Line 393
   it('Should handle renaming a table with special characters in the name', async () => {
     const queryObject = Sqlite.rename('old-table-name', 'new-table-name');
-    expect(queryObject.query).to.equal('RENAME TABLE `old-table-name` TO `new-table-name`');
+    expect(queryObject.query).to.equal('ALTER TABLE `old-table-name` RENAME TO `new-table-name`');
     expect(queryObject.values).to.be.empty;
   });
 
@@ -376,14 +376,6 @@ describe('Sqlite Dialect Tests', () => {
       expect(error.message).to.equal('No table specified');
     }
   });
-
-
-
-
-  /*
-  * ADD UNIT TEST TO ACHIEVE THE 85%
-  */
-
 
   it('Should handle case where field.default is a function call string other than "now()" and ensure it is converted to uppercase', () => {
     const create = new Create('test_table');
@@ -457,6 +449,61 @@ describe('Sqlite Dialect Tests', () => {
     });
     const query = Sqlite.alter(alter);
     expect(query[0].query).to.equal('ALTER TABLE `table` ALTER COLUMN `name` SET DATA TYPE VARCHAR(255)');
+    expect(query[0].values).to.be.empty;
+  });
+
+
+
+  it('Should translate create with multiple indexes, uniques and FKs', () => {
+    const create = new Create('table');
+    create.addField('name', {
+      type: 'string',
+      length: 255,
+      default: '',
+      nullable: true,
+      comment: 'Foobar'
+    });
+    create.addKey('foo', [ 'bar', 'zoo' ]);
+    create.addKey('bar', [ 'zoo', 'foo' ]);
+    create.addUniqueKey('foo', [ 'bar', 'zoo' ]);
+    create.addUniqueKey('bar', [ 'zoo', 'foo' ]);
+    create.addForeignKey('foo', {
+      local: 'bar',
+      foreign: 'zoo',
+      table: 'foo',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    create.addForeignKey('bar', {
+      local: 'zoo',
+      foreign: 'foo',
+      table: 'bar',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    const query = Sqlite.create(create);
+    expect(query[0].query).to.equal(
+      'CREATE TABLE IF NOT EXISTS `table` ('
+        + '`name` VARCHAR(255) NOT NULL DEFAULT NULL, '
+        + 'FOREIGN KEY (`bar`) REFERENCES `foo`(`zoo`) ' 
+        + 'ON DELETE CASCADE ON UPDATE RESTRICT, '
+        + 'FOREIGN KEY (`zoo`) REFERENCES `bar`(`foo`) '
+        + 'ON DELETE CASCADE ON UPDATE RESTRICT'
+      + ')'
+    );
+    expect(query[1].query).to.equal(
+      'CREATE UNIQUE INDEX `foo` ON `table`(`bar`, `zoo`)'
+    );
+    expect(query[2].query).to.equal(
+      'CREATE UNIQUE INDEX `bar` ON `table`(`zoo`, `foo`)'
+    );
+    expect(query[3].query).to.equal(
+      'CREATE INDEX `foo` ON `table`(`bar`, `zoo`)'
+    );
+    expect(query[4].query).to.equal(
+      'CREATE INDEX `bar` ON `table`(`zoo`, `foo`)'
+    );
+
     expect(query[0].values).to.be.empty;
   });
 });

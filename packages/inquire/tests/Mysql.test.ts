@@ -229,18 +229,16 @@ describe('Mysql Dialect Tests', () => {
     update.where('id = ?', [ 1 ]);
 
     const query = Mysql.update(update);
-    expect(query.query).to.equal("UPDATE `table` SET name = ? WHERE id = ?");
+    expect(query.query).to.equal("UPDATE `table` SET `name` = ? WHERE id = ?");
     expect(query.values?.[0]).to.equal('foobar');
     expect(query.values?.[1]).to.equal(1);
   });
-
-
 
   // Line 58
   it('Should set type to "TINYINT" when length is exactly 1', () => {
     const { type, length } = getType('int', 1);
     expect(type).to.equal('TINYINT');
-    expect(length).to.equal(1);
+    expect(length).to.be.undefined;
   });
 
   // Line 60
@@ -252,15 +250,15 @@ describe('Mysql Dialect Tests', () => {
 
   // Line 118
   it('Should verify that "DEFAULT NULL" is correctly added to the column array when nullable is true', async () => {
-  const alter = new Alter('table');
-  alter.addField('nullableField', { 
-  type: 'string',
-  length: 255,
-  nullable: true
-  });
-  
-  const query = Mysql.alter(alter);
-  expect(query[0].query).to.include('DEFAULT NULL');
+    const alter = new Alter('table');
+    alter.addField('nullableField', { 
+    type: 'string',
+    length: 255,
+    nullable: true
+    });
+    
+    const query = Mysql.alter(alter);
+    expect(query[0].query).to.include('DEFAULT NULL');
   });
 
    // Line 135
@@ -341,4 +339,48 @@ describe('Mysql Dialect Tests', () => {
     expect(() => Mysql.update(update)).to.throw('No data provided');
   });
 
+  it('Should translate create with multiple indexes, uniques and FKs', () => {
+    const create = new Create('table');
+    create.addField('name', {
+      type: 'string',
+      length: 255,
+      default: '',
+      nullable: true,
+      comment: 'Foobar'
+    });
+    create.addKey('foo', [ 'bar', 'zoo' ]);
+    create.addKey('bar', [ 'zoo', 'foo' ]);
+    create.addUniqueKey('foo', [ 'bar', 'zoo' ]);
+    create.addUniqueKey('bar', [ 'zoo', 'foo' ]);
+    create.addForeignKey('foo', {
+      local: 'bar',
+      foreign: 'zoo',
+      table: 'foo',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    create.addForeignKey('bar', {
+      local: 'zoo',
+      foreign: 'foo',
+      table: 'bar',
+      delete: 'CASCADE',
+      update: 'RESTRICT'
+    });
+    const query = Mysql.create(create);
+    expect(query[0].query).to.equal(
+      'CREATE TABLE IF NOT EXISTS `table` ('
+        + '`name` VARCHAR(255) NOT NULL DEFAULT NULL , '
+        + 'UNIQUE KEY `foo` (`bar`, `zoo`), '
+        + 'UNIQUE KEY `bar` (`zoo`, `foo`) , '
+        + 'KEY `foo` (`bar`, `zoo`), '
+        + 'KEY `bar` (`zoo`, `foo`) , '
+        + 'CONSTRAINT `foo` FOREIGN KEY (`bar`) REFERENCES `foo`(`zoo`) '
+        + 'ON DELETE CASCADE ON UPDATE RESTRICT, '
+        + 'CONSTRAINT `bar` FOREIGN KEY (`zoo`) REFERENCES `bar`(`foo`) '
+        + 'ON DELETE CASCADE ON UPDATE RESTRICT'
+      +')'
+    );
+
+    expect(query[0].values).to.be.empty;
+  });
 });

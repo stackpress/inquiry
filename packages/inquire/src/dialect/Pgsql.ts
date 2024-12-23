@@ -51,8 +51,10 @@ export function getType(key: string, length?: number | [ number, number ]) {
       //determine what kind of int
       if (length === 1) {
         type = 'SMALLINT';
+        length = undefined;
       } else if (length && length > 11) {
         type = 'BIGINT';
+        length = undefined;
       }
     }
   }
@@ -98,16 +100,16 @@ const Pgsql: Dialect = {
     //
     // DROP COLUMN `name`
 
-    const removeFields = build.fields.remove.map(
-      name => `DROP COLUMN ${q}${name}${q}`
-    );
+    build.fields.remove.forEach(name => {
+      query.push(`ALTER TABLE ${q}${build.table}${q} DROP COLUMN ${q}${name}${q}`);
+    });
 
     //----------------------------------------------------------------//
     // Add field
     //
     // ADD COLUMN `name` `type` (`length`) `attribute` `unsigned` `nullable` `autoIncrement` `default`
 
-    const addFields = Object.keys(build.fields.add).map(name => {
+    Object.keys(build.fields.add).forEach(name => {
       const field = build.fields.add[name];
       const column: string[] = [];
       const { type, length } = getType(field.type, field.length);
@@ -131,7 +133,10 @@ const Pgsql: Dialect = {
         column.push('DEFAULT NULL');
       }
 
-      return `ADD COLUMN ${column.join(' ')}`;
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `ADD COLUMN ${column.join(' ')}`
+      );
     });
 
     //----------------------------------------------------------------//
@@ -139,31 +144,52 @@ const Pgsql: Dialect = {
     //
     // ALTER COLUMN `name` `type` (`length`) `attribute` `unsigned` `nullable` `autoIncrement` `default`
 
-    const changeFields = Object.keys(build.fields.update).map(name => {
+    Object.keys(build.fields.update).forEach(name => {
       const field = build.fields.update[name];
-      const transactions: string[] = [];
       const { type, length } = getType(field.type, field.length);
       if (field.autoIncrement) {
-        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE SERIAL`);
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} `
+          + `ALTER COLUMN ${q}${name}${q} TYPE SERIAL`
+        );
       } else if (type === 'FLOAT' || type === 'INTEGER') {
-        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}`);
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} ` 
+          + `ALTER COLUMN ${q}${name}${q} TYPE ${type}`
+        );
       } else if (Array.isArray(length)) {
-        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}(${length.join(', ')})`);
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} ` 
+          + `ALTER COLUMN ${q}${name}${q} TYPE ${type}(${length.join(', ')})`
+        );
       } else if (length) {
-        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}(${length})`);
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} ` 
+          + `ALTER COLUMN ${q}${name}${q} TYPE ${type}(${length})`
+        );
       } else {
-        transactions.push(`ALTER COLUMN ${q}${name}${q} TYPE ${type}`);
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} ` 
+          + `ALTER COLUMN ${q}${name}${q} TYPE ${type}`
+        );
       }
       if (typeof field.nullable === 'boolean' && !field.nullable) {
-        transactions.push(`ALTER COLUMN ${q}${name}${q} SET NOT NULL`);
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} ` 
+          + `ALTER COLUMN ${q}${name}${q} SET NOT NULL`
+        );
       }
       if (field.default) {
-        transactions.push(`ALTER COLUMN ${q}${name}${q} SET DEFAULT ${getDefault(field.default, type)}`);
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} ` 
+          + `ALTER COLUMN ${q}${name}${q} SET DEFAULT ${getDefault(field.default, type)}`
+        );
       } else if (field.nullable) {
-        transactions.push('ALTER COLUMN ${q}${name}${q} SET DEFAULT NULL');
+        query.push(
+          `ALTER TABLE ${q}${build.table}${q} ` 
+          + `ALTER COLUMN ${q}${name}${q} SET DEFAULT NULL`
+        );
       }
-
-      return transactions.join(', ');
     });
 
     //----------------------------------------------------------------//
@@ -171,63 +197,82 @@ const Pgsql: Dialect = {
     //
     // DROP CONSTRAINT `name`
 
-    const removePrimaries = build.primary.remove.map(
-      name => `DROP CONSTRAINT ${q}${name}${q}`
-    );
+    build.primary.remove.forEach(name => {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `DROP CONSTRAINT ${q}${name}${q}`
+      );
+    });
 
     //----------------------------------------------------------------//
     // Add primary keys
     //
     // ADD PRIMARY KEY (`name`, `name`)
 
-    const addPrimaries = build.primary.add.length 
-      ? [ `ADD PRIMARY KEY (${q}${build.primary.add.join(`${q}, ${q}`)}${q})` ]
-      : [];
+    if (build.primary.add.length) {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        +`ADD PRIMARY KEY (${q}${build.primary.add.join(`${q}, ${q}`)}${q})`
+      );
+    }
 
     //----------------------------------------------------------------//
     // Drop unique keys
     // 
     // DROP UNIQUE `name`
 
-    const removeUniques = build.unique.remove.map(
-      name => `DROP UNIQUE ${q}${name}${q}`
-    );
+    build.unique.remove.forEach(name => {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `DROP UNIQUE ${q}${name}${q}`
+      );
+    });
 
     //----------------------------------------------------------------//
     // Add unique keys
     //
     // ADD UNIQUE `name` (`name`, `name`)
 
-    const addUniques = Object.keys(build.unique.add).map(
-      key => `ADD UNIQUE ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
-    );
+    Object.keys(build.unique.add).forEach(key => {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `ADD UNIQUE ${q}${key}${q} (${q}${build.unique.add[key].join(`${q}, ${q}`)}${q})`
+      );
+    });
 
     //----------------------------------------------------------------//
     // Drop keys
     //
     // DROP INDEX `name`
 
-    const removeKeys = build.keys.remove.map(
-      name => `DROP INDEX ${q}${name}${q}`
-    );
+    build.keys.remove.forEach(name => {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `DROP INDEX ${q}${name}${q}`);
+    });
 
     //----------------------------------------------------------------//
     // Add keys
     //
     // ADD INDEX `name` (`name`, `name`)
 
-    const addKeys = Object.keys(build.keys.add).map(
-      key => `ADD INDEX ${q}${key}${q} (${q}${build.keys.add[key].join(`${q}, ${q}`)}${q})`
-    );
+    Object.keys(build.keys.add).forEach(key => {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `ADD INDEX ${q}${key}${q} (${q}${build.keys.add[key].join(`${q}, ${q}`)}${q})`
+      );
+    });
 
     //----------------------------------------------------------------//
     // Drop foreign key
     //
     // DROP CONSTRAINT column1_name
 
-    const removeForeignKeys = build.foreign.remove.map(
-      name => `DROP CONSTRAINT ${q}${name}${q}`
-    );
+    build.foreign.remove.forEach(name => {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `DROP CONSTRAINT ${q}${name}${q}`);
+    });
 
     //----------------------------------------------------------------//
     // Add foreign keys
@@ -235,49 +280,20 @@ const Pgsql: Dialect = {
     // FOREIGN KEY (column1_name) REFERENCES table_name(column1_name)
     // ON DELETE CASCADE
     // ON UPDATE RESTRICT
-    const addForeignKeys = Object.entries(build.foreign.add).map(([ name, info ]) => {
-      return [
-        `ADD CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q})`,
-        `REFERENCES ${q}${info.table}${q}(${q}${info.foreign}${q})`,
-        info.delete ? `ON DELETE ${info.delete}`: '', 
-        info.update ? `ON UPDATE ${info.update}`: ''
-      ].join(' ');
+    Object.entries(build.foreign.add).forEach(([ name, info ]) => {
+      query.push(
+        `ALTER TABLE ${q}${build.table}${q} `
+        + `ADD CONSTRAINT ${q}${name}${q} FOREIGN KEY (${q}${info.local}${q}) `
+        + `REFERENCES ${q}${info.table}${q}(${q}${info.foreign}${q}) `
+        + (info.delete ? `ON DELETE ${info.delete} `: '')
+        + (info.update ? `ON UPDATE ${info.update} `: '')
+      );
     });
 
-    if (!removeFields.length
-      && !addFields.length
-      && !changeFields.length
-      && !removePrimaries.length
-      && !addPrimaries.length
-      && !removeUniques.length
-      && !addUniques.length
-      && !removeKeys.length
-      && !addKeys.length
-      && !removeForeignKeys.length
-      && !addForeignKeys.length
-    ) {
+    if (!query.length) {
       throw Exception.for('No alterations made.')
     }
-
-    query.push(
-      ...removeFields,
-      ...addFields,
-      ...changeFields,
-      ...removePrimaries,
-      ...addPrimaries,
-      ...removeUniques,
-      ...addUniques,
-      ...removeKeys,
-      ...addKeys,
-      ...removeForeignKeys,
-      ...addForeignKeys
-    );
-    return [
-      { 
-        query: `ALTER TABLE ${q}${build.table}${q} ${query.join(', ')}`, 
-        values: [] 
-      }
-    ];
+    return query.map(query => ({ query, values: [] }));
   },
 
   /**
@@ -446,6 +462,7 @@ const Pgsql: Dialect = {
     });
 
     query.push(`VALUES ${rows.join(', ')}`);
+    
     if (build.returning.length) {
       query.push(`RETURNING ${build.returning.map(
         column => column !== '*' ? `${q}${column}${q}` : column
@@ -554,7 +571,7 @@ const Pgsql: Dialect = {
     if (Object.keys(build.data).length) {
       const data = Object.keys(build.data).map(key => {
         values.push(build.data[key]);
-        return `${key} = ?`;
+        return `${q}${key}${q} = ?`;
       }).join(', ');
       query.push(`SET ${data}`);
     }
