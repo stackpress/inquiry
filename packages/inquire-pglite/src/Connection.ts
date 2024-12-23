@@ -75,7 +75,7 @@ export default class PGLiteConnection implements Connection {
    */
   public async raw<R = unknown>(request: QueryObject) {
     const formatted = this.format(request);
-    return this._query<R>(formatted, this.resource);
+    return await this._query<R>(formatted, this.resource);
   }
 
   /**

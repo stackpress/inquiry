@@ -248,7 +248,6 @@ const Sqlite: Dialect = {
       }
       field.attribute && column.push(field.attribute);
       field.nullable && column.push('NOT NULL');
-      field.autoIncrement && column.push('AUTOINCREMENT');
       if (field.default) {
         if (typeof field.default === 'boolean') {
           column.push(`DEFAULT ${field.default ? '1' : '0'}`);
@@ -272,6 +271,7 @@ const Sqlite: Dialect = {
       if (build.primary.includes(name)) {
         column.push('PRIMARY KEY');
       }
+      field.autoIncrement && column.push('AUTOINCREMENT');
 
       return column.join(' ');
     });
@@ -391,7 +391,7 @@ const Sqlite: Dialect = {
    */
   rename(from: string, to: string) {
     return { 
-      query: `RENAME TABLE ${q}${from}${q} TO ${q}${to}${q}`, 
+      query: `ALTER TABLE ${q}${from}${q} RENAME TO ${q}${to}${q}`, 
       values: [] 
     };
   },
@@ -484,7 +484,7 @@ const Sqlite: Dialect = {
     if (Object.keys(build.data).length) {
       const data = Object.keys(build.data).map(key => {
         values.push(build.data[key]);
-        return `${key} = ?`;
+        return `${q}${key}${q} = ?`;
       }).join(', ');
       query.push(`SET ${data}`);
     }

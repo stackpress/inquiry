@@ -88,8 +88,4 @@ describe('Insert Builder Tests', () => {
     expect(build.values).to.be.an('array').that.has.lengthOf(1);
     expect(build.values[0]).to.deep.equal(singleValue);
   });
-
-  
-
-
 });
