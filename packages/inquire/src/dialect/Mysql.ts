@@ -56,8 +56,10 @@ export function getType(key: string, length?: number | [ number, number ]) {
       //determine what kind of int
       if (length === 1) {
         type = 'TINYINT';
+        length = undefined;
       } else if (length && length > 11) {
         type = 'BIGINT';
+        length = undefined;
       }
     }
   }
@@ -535,7 +537,7 @@ const Mysql: Dialect = {
     if (Object.keys(build.data).length) {
       const data = Object.keys(build.data).map(key => {
         values.push(build.data[key]);
-        return `${key} = ?`;
+        return `${q}${key}${q} = ?`;
       }).join(', ');
       query.push(`SET ${data}`);
     }

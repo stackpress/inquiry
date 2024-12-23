@@ -50,13 +50,25 @@ describe('Engine Tests', () => {
       .addUniqueKey('name', 'name');
     //DROP INDEX "active"
     const alter = engine.diff(from, to);
-    expect(alter.query()[0].query).to.equal(`ALTER TABLE "profile" `
-      + `ADD COLUMN "age" INTEGER NOT NULL, `
-      + `ALTER COLUMN "id" TYPE SERIAL, `
-      + `ALTER COLUMN "bio" TYPE TEXT, `
-      + `ALTER COLUMN "active" TYPE BOOLEAN, `
-      + `ALTER COLUMN "active" SET DEFAULT TRUE, `
-      + `DROP INDEX "active"`);
+    const queries = alter.query();
+    expect(queries[0].query).to.equal(
+      `ALTER TABLE "profile" ADD COLUMN "age" INTEGER NOT NULL`
+    );
+    expect(queries[1].query).to.equal(
+      `ALTER TABLE "profile" ALTER COLUMN "id" TYPE SERIAL`
+    );
+    expect(queries[2].query).to.equal(
+      `ALTER TABLE "profile" ALTER COLUMN "bio" TYPE TEXT`
+    );
+    expect(queries[3].query).to.equal(
+      `ALTER TABLE "profile" ALTER COLUMN "active" TYPE BOOLEAN`
+    );
+    expect(queries[4].query).to.equal(
+      `ALTER TABLE "profile" ALTER COLUMN "active" SET DEFAULT TRUE`
+    );
+    expect(queries[5].query).to.equal(
+      `ALTER TABLE "profile" DROP INDEX "active"`
+    );
 
     try {
       engine.diff(from, from).query()
@@ -373,6 +385,6 @@ class MockConnection implements Connection {
    * Runs multiple queries in a transaction
    */
   public async transaction<R = unknown>(callback: Transaction<R>) {
-    return [];
+    return [] as R;
   }
 }

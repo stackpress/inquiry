@@ -8,9 +8,12 @@ async function main() {
   const engine = connect(resource);
 
   const create = engine.create('profile')
-    .addField('id', { type: 'VARCHAR', length: 255 })
-    .addField('name', { type: 'VARCHAR', length: 255 })
-    .addPrimaryKey('id');
+    .addField('id', { type: 'int', autoIncrement: true })
+    .addField('name', { type: 'string', length: 255 })
+    .addField('price', { type: 'float', length: [ 10, 2 ], unsigned: true })
+    .addField('created', { type: 'date', default: 'now()' })
+    .addPrimaryKey('id')
+    .addUniqueKey('name', 'name');
   console.log(create.query());
   console.log(await create);
 
