@@ -48,6 +48,8 @@ export default class BetterSqlite3Connection implements Connection {
         values[i] = JSON.stringify(value);
       } else if (value && typeof value === 'object') {
         values[i] = JSON.stringify(value);
+      } else if (typeof value === 'boolean') {
+        values[i] = Number(value);
       }
     }
     return { query, values };
