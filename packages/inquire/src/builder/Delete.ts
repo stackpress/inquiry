@@ -1,5 +1,5 @@
 //common
-import type { Resolve, Dialect, FlatValue } from '../types';
+import type { Reject, Resolve, Dialect, FlatValue } from '../types';
 import Engine from '../Engine';
 import Exception from '../Exception';
 
@@ -66,11 +66,11 @@ export default class Delete<R = unknown> {
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
-  public then(resolve: Resolve<R[]>) {
+  public then(resolve: Resolve<R[]>, reject: Reject) {
     if (!this._engine) {
       throw Exception.for('No engine provided');
     }
-    return this._engine.query<R>(this.query()).then(resolve);
+    return this._engine.query<R>(this.query()).then(resolve).catch(reject);
   }
 
   /**
