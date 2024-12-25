@@ -1,6 +1,7 @@
 //common
 import type { 
   Field, 
+  Reject,
   Resolve,
   Dialect,
   ForeignKey,
@@ -195,7 +196,7 @@ export default class Alter<R = unknown> {
    * Makes class awaitable. Should get the 
    * query and values and call the action.
    */
-  public then(resolve: Resolve<R[]>) {
+  public then(resolve: Resolve<R[]>, reject: Reject) {
     if (!this._engine) {
       throw Exception.for('No engine provided');
     }
@@ -206,6 +207,6 @@ export default class Alter<R = unknown> {
         await connection.query<R>(connection.format(request));
       }
       return await connection.query<R>(connection.format(last));
-    }).then(resolve);
+    }).then(resolve).catch(reject);
   }
 }
