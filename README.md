@@ -1,9 +1,12 @@
 # Inquire
 
-A powerful, type-safe SQL query builder for TypeScript/JavaScript that supports multiple database engines.
+A powerful, type-safe SQL query builder for TypeScript/JavaScript that 
+supports multiple database engines.
 
-[![npm version](https://badge.fury.io/js/@stackpress%2Finquire.svg)](https://badge.fury.io/js/@stackpress%2Finquire)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![npm version](https://badge.fury.io/js/@stackpress%2Finquire.svg)]
+(https://badge.fury.io/js/@stackpress%2Finquire)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)]
+(https://opensource.org/licenses/Apache-2.0)
 
 ## Features
 
@@ -75,7 +78,8 @@ inquire/
 
 ## Documentation
 
-Visit our [documentation website](./docs) for detailed guides and API reference:
+Visit our [documentation website](./docs) 
+for detailed guides and API reference:
 
 - [Getting Started](./docs/guide/index.md)
 - [Installation Guide](./docs/guide/installation.md)
@@ -85,20 +89,25 @@ Visit our [documentation website](./docs) for detailed guides and API reference:
 
 ## Examples
 
-Check out the `examples` directory for complete working examples with different database engines.
+Check out the `examples` directory for complete working examples 
+with different database engines.
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide]
+(CONTRIBUTING.md) for details.
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - 
+see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- Report issues on [GitHub Issues](https://github.com/stackpress/inquire/issues)
-- For questions and discussions, use [GitHub Discussions](https://github.com/stackpress/inquire/discussions)
+- Report issues on [GitHub Issues]
+  (https://github.com/stackpress/inquire/issues)
+- For questions and discussions, use [GitHub Discussions]
+  (https://github.com/stackpress/inquire/discussions)
 
 ## Acknowledgments
 
