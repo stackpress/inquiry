@@ -94,6 +94,7 @@ export type Join = 'inner'
 // Dialect Types
 
 export type Dialect = {
+  q: string,
   alter(builder: Alter): QueryObject[];
   create(builder: Create): QueryObject[];
   delete(builder: Delete): QueryObject;
