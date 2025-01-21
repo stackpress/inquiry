@@ -205,6 +205,17 @@ export default class Engine {
   }
 
   /**
+   * Template string query builder
+   * 
+   * Usage:
+   * await engine.sql`SELECT * FROM table WHERE id = ${id}`;
+   */
+  public sql(strings: string[], ...values: Value[]) {
+    const query = strings.join('?').replaceAll('`', this.dialect.q);
+    return this.query(query, values);
+  }
+
+  /**
    * Common pattern to invoke a transaction
    */
   public transaction<R = unknown>(callback: Transaction<R>) {
