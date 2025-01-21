@@ -11,7 +11,7 @@ import Exception from '../Exception';
 import { joins } from '../helpers';
 
 //The character used to quote identifiers.
-const q = '"';
+export const q = '"';
 
 export const typemap: Record<string, string> = {
   object: 'JSONB',
@@ -88,6 +88,11 @@ export function getDefault(value: any, type: string) {
 };
 
 const Pgsql: Dialect = {
+  /**
+   * Recommended quote character
+   */
+  q, 
+  
   /**
    * Converts alter builder to query and values
    */
