@@ -1,12 +1,21 @@
 {
   "name": "@stackpress/inquire-pg",
-  "version": "0.3.17",
+  "version": "0.3.21",
   "license": "Apache-2.0",
   "description": "Generic typed pg",
   "author": "Chris <chris@incept.asia>",
   "homepage": "https://github.com/stackpress/inquire",
   "bugs": "https://github.com/stackpress/inquire/issues",
   "repository": "stackpress/inquire",
+  "keywords": [
+    "ts",
+    "typescript",
+    "database",
+    "sql",
+    "pg",
+    "postgres",
+    "stackpress"
+  ],
   "main": "index.js",
   "files": [
     "dist",
@@ -17,10 +26,10 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "nyc ts-mocha tests/*.test.ts"
+    "test": "ts-mocha tests/*.test.ts"
   },
   "dependencies": {
-    "@stackpress/inquire": "0.3.17"
+    "@stackpress/inquire": "0.3.21"
   },
   "peerDependencies": {
     "pg": "^8.13.1"
@@ -32,7 +41,6 @@
     "@types/pg": "8.11.10",
     "chai": "4.5.0",
     "mocha": "10.8.2",
-    "nyc": "17.1.0",
     "pg": "8.13.1",
     "ts-node": "10.9.2",
     "typescript": "5.7.2"
