@@ -1,5 +1,11 @@
 # 💬 Inquire
 
+[![NPM Package](https://img.shields.io/npm/v/@stackpress/inquire.svg?style=flat)](https://www.npmjs.com/package/@stackpress/inquire)
+[![Tests Status](https://img.shields.io/github/actions/workflow/status/stackpress/inquire/test.yml)](https://github.com/stackpress/inquire/actions)
+[![Coverage Status](https://coveralls.io/repos/github/stackpress/inquire/badge.svg?branch=main)](https://coveralls.io/github/stackpress/inquire?branch=main)
+[![Commits](https://img.shields.io/github/last-commit/stackpress/inquire)](https://github.com/stackpress/inquire/commits/main/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat)](https://github.com/stackpress/inquire/blob/main/LICENSE)
+
 Super lightweight generic typed SQL query builder, SQL dialects and composite engine. Schema builder, but no ORM. Bring your own database library.
 
  - Node MySQL2
