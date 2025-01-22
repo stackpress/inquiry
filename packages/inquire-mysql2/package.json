@@ -1,12 +1,20 @@
 {
   "name": "@stackpress/inquire-mysql2",
-  "version": "0.3.17",
+  "version": "0.3.21",
   "license": "Apache-2.0",
   "description": "Generic typed mysql2",
   "author": "Chris <chris@incept.asia>",
   "homepage": "https://github.com/stackpress/inquire",
   "bugs": "https://github.com/stackpress/inquire/issues",
   "repository": "stackpress/inquire",
+  "keywords": [
+    "ts",
+    "typescript",
+    "database",
+    "sql",
+    "mysql",
+    "stackpress"
+  ],
   "main": "index.js",
   "files": [
     "dist",
@@ -17,10 +25,10 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "nyc ts-mocha tests/*.test.ts"
+    "test": "ts-mocha tests/*.test.ts"
   },
   "dependencies": {
-    "@stackpress/inquire": "0.3.17"
+    "@stackpress/inquire": "0.3.21"
   },
   "peerDependencies": {
     "mysql2": "^3.11.5"
@@ -31,7 +39,6 @@
     "@types/node": "22.9.3",
     "chai": "4.5.0",
     "mocha": "10.8.2",
-    "nyc": "17.1.0",
     "ts-mocha": "10.0.0",
     "mysql2": "3.11.5",
     "ts-node": "10.9.2",
