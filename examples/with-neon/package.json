@@ -1,0 +1,19 @@
+{
+    "name": "with-neon",
+    "version": "1.0.0",
+    "description": "A simple example for using inquire with NeonDB.",
+    "private": true,
+    "scripts": {
+      "build": "tsc",
+      "start": "ts-node ./index.ts"
+    },
+    "dependencies": {
+      "@stackpress/inquire-pg": "0.3.27",
+      "pg": "^8.13.1"
+    },
+    "devDependencies": {
+      "@types/node": "22.9.3",
+      "ts-node": "10.9.2",
+      "typescript": "5.7.2"
+    }
+  }

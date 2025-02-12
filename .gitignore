@@ -130,3 +130,5 @@ dist
 .pnp.*
 examples/*/build
 packages/*/tests/database
+
+yarn.lock
