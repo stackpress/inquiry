@@ -5,7 +5,7 @@
     "private": true,
     "scripts": {
       "build": "tsc",
-      "start": "ts-node ./index.ts"
+      "start": "ts-node ./src/index.ts"
     },
     "dependencies": {
       "@stackpress/inquire-pg": "0.3.27",

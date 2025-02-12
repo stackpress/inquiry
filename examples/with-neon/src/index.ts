@@ -4,19 +4,13 @@ import * as dotenv from 'dotenv';
 dotenv.config()
 
 async function main() {
-  // Use a Pool for connection pooling
   const pool = new Pool({
     connectionString: process.env.NEON_DATABASE_URL,
     application_name: "Inquire",
   });
-
-  // Connect to the database
   const connection = await pool.connect();
-
-  // Map the resource to the engine
   const engine = connect(connection);
 
-  // Example usage
   const create = engine.create('profile')
     .addField('id', { type: 'VARCHAR', length: 255 })
     .addField('name', { type: 'VARCHAR', length: 255 })
@@ -33,6 +27,8 @@ async function main() {
   const select = engine.select('*').from('profile');
   console.log(select.query());
   console.log(JSON.stringify(await select, null, 2));
+
+  connection.release(); 
 }
 
 main().catch(console.error);
