@@ -1,0 +1,21 @@
+{
+    "name": "with-supabase",
+    "version": "1.0.0",
+    "description": "A simple example for using inquire with Supabase.",
+    "private": true,
+    "scripts": {
+      "build": "tsc",
+      "start": "ts-node ./src/index.ts"
+    },
+    "dependencies": {
+      "@stackpress/inquire-pg": "0.3.27",
+      "@supabase/supabase-js": "^2.42.0",
+      "pg": "^8.13.1",
+      "dotenv": "^16.4.5"
+    },
+    "devDependencies": {
+      "@types/node": "22.9.3",
+      "ts-node": "10.9.2",
+      "typescript": "5.7.2"
+    }
+  }
