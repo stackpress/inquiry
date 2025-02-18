@@ -1,5 +1,3 @@
-//modules
-import { Client, PoolClient } from 'pg';
 //stackpress
 import type { 
   Dialect, 
@@ -10,19 +8,19 @@ import type {
 import Pgsql from '@stackpress/inquire/dist/dialect/Pgsql';
 import Exception from '@stackpress/inquire/dist/Exception';
 //local
-import type { Results } from './types';
+import type { Connector, Resource, Results } from './types';
 
-export default class PGConnection implements Connection {
+export default class PGConnection implements Connection<Resource> {
   //sql language dialect
   public readonly dialect: Dialect = Pgsql;
   //the database connection
-  public readonly resource: Client|PoolClient;
+  protected _resource: Connector;
 
   /**
    * Set the connection
    */
-  public constructor(resource: Client|PoolClient) {
-    this.resource = resource;
+  public constructor(resource: Connector) {
+    this._resource = resource;
   }
 
   /**
@@ -78,6 +76,16 @@ export default class PGConnection implements Connection {
   }
 
   /**
+   * Returns the resource
+   */
+  public async resource() {
+    if (typeof this._resource === 'function') {
+      this._resource = await this._resource();
+    }
+    return this._resource;
+  }
+
+  /**
    * Runs multiple queries in a transaction
    */
   public async transaction<R = unknown>(callback: Transaction<R>) {
@@ -95,8 +103,9 @@ export default class PGConnection implements Connection {
   /**
    * Call the database. If no values are provided, use exec
    */
-  protected _query<R = unknown>(request: QueryObject) {
+  protected async _query<R = unknown>(request: QueryObject) {
     const { query, values = [] } = request;
-    return this.resource.query(query, values) as Promise<Results<R>>;
+    const resource = await this.resource();
+    return (await resource.query(query, values)) as Results<R>;
   }
 }

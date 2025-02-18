@@ -14,10 +14,13 @@ import type {
 } from './types';
 import { jsonCompare } from './helpers';
 
-export default class Engine {
+export default class Engine<R = unknown> {
   //database connection
-  public readonly connection: Connection;
-  //sql dialect
+  public readonly connection: Connection<R>;
+  
+  /**
+   * Returns sql dialect
+   */
   public get dialect() {
     return this.connection.dialect;
   }
@@ -25,7 +28,7 @@ export default class Engine {
   /**
    * Sets the query callback
    */
-  public constructor(connection: Connection) {
+  public constructor(connection: Connection<R>) {
     this.connection = connection;
   }
 

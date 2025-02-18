@@ -1,11 +1,10 @@
-//modules
-import { Client, PoolClient } from 'pg';
 //stackpress
 import Engine from '@stackpress/inquire/dist/Engine';
 //local
+import type { Connector, Resource } from './types';
 import Connection from './Connection';
 
-export function connect(resource: Client|PoolClient) {
+export function connect(resource: Connector) {
   const connection = new Connection(resource);
-  return new Engine(connection);
+  return new Engine<Resource>(connection);
 }

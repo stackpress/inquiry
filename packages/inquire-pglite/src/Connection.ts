@@ -1,5 +1,5 @@
 //modules
-import type { PGlite, Transaction as TX } from '@electric-sql/pglite';
+import type { Transaction as TX } from '@electric-sql/pglite';
 //stackpress
 import type { 
   Dialect, 
@@ -10,20 +10,19 @@ import type {
 import Pgsql from '@stackpress/inquire/dist/dialect/Pgsql';
 import Exception from '@stackpress/inquire/dist/Exception';
 //local
-import type { Results } from './types';
+import type { Connector, Resource, Results } from './types';
 
-export default class PGLiteConnection implements Connection {
+export default class PGLiteConnection implements Connection<Resource> {
   //sql language dialect
   public readonly dialect: Dialect = Pgsql;
-
   //the database connection
-  public readonly resource: PGlite;
+  protected _resource: Connector;
 
   /**
    * Set the connection
    */
-  public constructor(resource: PGlite) {
-    this.resource = resource;
+  public constructor(resource: Connector) {
+    this._resource = resource;
   }
 
   /**
@@ -75,7 +74,18 @@ export default class PGLiteConnection implements Connection {
    */
   public async raw<R = unknown>(request: QueryObject) {
     const formatted = this.format(request);
-    return await this._query<R>(formatted, this.resource);
+    const resource = await this.resource();
+    return await this._query<R>(formatted, resource);
+  }
+
+  /**
+   * Returns the resource
+   */
+  public async resource() {
+    if (typeof this._resource === 'function') {
+      this._resource = await this._resource();
+    }
+    return this._resource;
   }
 
   /**
@@ -98,7 +108,7 @@ export default class PGLiteConnection implements Connection {
    */
   protected async _query<R = unknown>(
     request: QueryObject, 
-    resource: PGlite|TX
+    resource: Resource|TX
   ) {
     const { query, values = [] } = request;
     return values.length === 0

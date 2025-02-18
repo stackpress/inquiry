@@ -108,7 +108,7 @@ describe('Sqlite3 Tests', () => {
   });
 
   // Line 100
-  it('Should handle a query with no values and return the expected result', () => {
+  it('Should handle a query with no values and return the expected result', async () => {
     const expectedResult = [{ id: 1, name: 'Test User' }];
     const resource = {
       prepare: () => ({
@@ -117,7 +117,7 @@ describe('Sqlite3 Tests', () => {
     };
     const connection = new BetterSqlite3Connection(resource as any);
     const request = { query: 'SELECT * FROM users' };
-    const result = connection['_query'](request);
+    const result = await connection['_query'](request);
     expect(result).to.deep.equal(expectedResult);
   });
 

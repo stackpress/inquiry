@@ -113,7 +113,7 @@ export type QueryObject = { query: string, values?: Value[] };
 
 export type Transaction<R = unknown> = (tx: Connection) => Promise<R>;
 
-export interface Connection {
+export interface Connection<R = unknown> {
   //sql language dialect
   dialect: Dialect;
 
@@ -130,6 +130,11 @@ export interface Connection {
    * this library should not care about the kind of database.
    */
   query<R = unknown>(request: QueryObject): Promise<R[]>;
+
+  /**
+   * Returns the resource
+   */
+  resource(): Promise<R>;
 
   /**
    * Common pattern to invoke a transaction

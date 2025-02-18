@@ -1,8 +1,5 @@
 //modules
-import type { 
-  ResultSetHeader,
-  Connection as Database 
-} from 'mysql2/promise';
+import type { ResultSetHeader } from 'mysql2/promise';
 //stackpress
 import type { 
   Dialect, 
@@ -12,15 +9,15 @@ import type {
 } from '@stackpress/inquire/dist/types';
 import Mysql from '@stackpress/inquire/dist/dialect/Mysql';
 //local
-import type { Results } from './types';
+import type { Connector, Resource, Results } from './types';
 
-export default class Mysql2Connection implements Connection {
+export default class Mysql2Connection implements Connection<Resource> {
   //sql language dialect
   public readonly dialect: Dialect = Mysql;
-  //the database connection
-  public readonly resource: Database;
   //last inserted id
   protected _lastId?: number|string;
+  //the database connection
+  protected _resource: Connector;
 
   /**
    * Get the last inserted id
@@ -32,8 +29,8 @@ export default class Mysql2Connection implements Connection {
   /**
    * Set the connection
    */
-  public constructor(resource: Database) {
-    this.resource = resource;
+  public constructor(resource: Connector) {
+    this._resource = resource;
   }
 
   /**
@@ -80,16 +77,27 @@ export default class Mysql2Connection implements Connection {
   }
 
   /**
+   * Returns the resource
+   */
+  public async resource() {
+    if (typeof this._resource === 'function') {
+      this._resource = await this._resource();
+    }
+    return this._resource;
+  }
+
+  /**
    * Runs multiple queries in a transaction
    */
   public async transaction<R = unknown>(callback: Transaction<R>) {
+    const resource = await this.resource();
     try {
-      await this.resource.beginTransaction();
+      await resource.beginTransaction();
       const results = await callback(this);
-      await this.resource.commit();
+      await resource.commit();
       return results;
     } catch (e) {
-      await this.resource.rollback();
+      await resource.rollback();
       throw e;
     }
   }
@@ -99,7 +107,8 @@ export default class Mysql2Connection implements Connection {
    */
   protected async _query<R = unknown>(request: QueryObject) {
     const { query, values = [] } = request;
-    const results = await this.resource.execute(query, values);
+    const resource = await this.resource();
+    const results = await resource.execute(query, values);
     if (Array.isArray(results[0])) {
       return results as Results<R>;
     }

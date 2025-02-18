@@ -1,5 +1,3 @@
-//modules
-import type { Database } from 'better-sqlite3';
 //stackpress
 import type { 
   Dialect, 
@@ -9,15 +7,15 @@ import type {
 } from '@stackpress/inquire/dist/types';
 import Sqlite from '@stackpress/inquire/dist/dialect/Sqlite';
 //local
-import type { Results } from './types';
+import type { Connector, Resource, Results } from './types';
 
-export default class BetterSqlite3Connection implements Connection {
+export default class BetterSqlite3Connection implements Connection<Resource> {
   //sql language dialect
   public readonly dialect: Dialect = Sqlite;
-  //the database connection
-  public readonly resource: Database;
   //last inserted id
   protected _lastId?: number|string;
+  //the database connection
+  protected _resource: Connector;
 
   /**
    * Get the last inserted id
@@ -29,8 +27,8 @@ export default class BetterSqlite3Connection implements Connection {
   /**
    * Set the connection
    */
-  public constructor(resource: Database) {
-    this.resource = resource;
+  public constructor(resource: Connector) {
+    this._resource = resource;
   }
 
   /**
@@ -79,6 +77,16 @@ export default class BetterSqlite3Connection implements Connection {
   }
 
   /**
+   * Returns the resource
+   */
+  public async resource(): Promise<Resource> {
+    if (typeof this._resource === 'function') {
+      this._resource = await this._resource();
+    }
+    return this._resource;
+  }
+
+  /**
    * Runs multiple queries in a transaction
    */
   public async transaction<R = unknown>(callback: Transaction<R>) {
@@ -96,9 +104,10 @@ export default class BetterSqlite3Connection implements Connection {
   /**
    * Call the database. If no values are provided, use exec
    */
-  protected _query<R = unknown>(request: QueryObject) {
+  protected async _query<R = unknown>(request: QueryObject) {
     const { query, values = [] } = request;
-    const stmt = this.resource.prepare(query);
+    const resource = await this.resource();
+    const stmt = resource.prepare(query);
     const QUERY = query.toUpperCase();
     if (QUERY.startsWith('SELECT')
       || (QUERY.startsWith('INSERT')
